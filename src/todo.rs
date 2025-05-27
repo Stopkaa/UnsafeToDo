@@ -1,11 +1,10 @@
 use chrono::{DateTime, NaiveDate, Utc};
-use std::fs::OpenOptions;
-use serde::{Serialize, Deserialize};
-use std::fs::{self, File};
-use std::io::{self, Read, Write};
-use std::path::{self, PathBuf};
 use dirs::data_local_dir;
-
+use serde::{Deserialize, Serialize};
+use std::fs::OpenOptions;
+use std::fs::{self, File,};
+use std::io::{self,Write, BufRead, BufReader};
+use std::path::PathBuf;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Todo {
@@ -31,15 +30,21 @@ impl Todo {
         }
     }
 
-    pub fn save_to_file(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
-        let mut as_cbor = serde_cbor::to_vec(self)?;
+    fn get_data_path() -> PathBuf {
+        let mut path = data_local_dir().unwrap_or_else(|| PathBuf::from("."));
+        path.push("unsafe_todo");
+        fs::create_dir_all(&path).ok();
+        path.push("todos.txt");
+        path
+    }
+
+    pub fn save_to_file(&self, path: &str, append: bool) -> Result<(), Box<dyn std::error::Error>> {
+        let as_json = serde_json::to_string(self)?;
+        let path = Self::get_data_path();
         //as_cbor.push(b'\n');
-        let mut file = OpenOptions::new()
-            .create(true) 
-            .append(true)
-            .open(path)?;
-        
-        file.write_all(&as_cbor)?;
+        let mut file = OpenOptions::new().create(true).append(append).open(path)?;
+
+        writeln!(file, "{}", as_json)?;
 
         Ok(())
     }
@@ -59,26 +64,33 @@ impl TodoList {
         let mut path = data_local_dir().unwrap_or_else(|| PathBuf::from("."));
         path.push("unsafe_todo");
         fs::create_dir_all(&path).ok();
-        path.push("todos.cbor");
+        path.push("todos.txt");
         path
     }
-
     pub fn load() -> io::Result<Self> {
         let path = Self::get_data_path();
         if !path.exists() {
             return Ok(TodoList::new());
         }
-        let mut file = File::open(path)?;
-        let mut buffer = Vec::new();
-        file.read_to_end(&mut buffer)?;
-        let list = serde_cbor::from_slice(&buffer).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        let mut list = Self::new();
+        let file = File::open(path)?;
+        let reader = BufReader::new(file);
+
+        for line in reader.lines() {
+            let line = line?;
+            let todo: Todo = serde_json::from_str(&line)?;
+            list.todos.push(todo);
+        }
         Ok(list)
     }
 
     pub fn save(&self) -> Result<(), Box<dyn std::error::Error>> {
         let path = Self::get_data_path();
         let path = path.to_str().unwrap_or("todo.txt");
-        self.todos.iter().try_for_each(|todo| todo.save_to_file(&path))
+        File::create(path)?;
+        self.todos
+            .iter()
+            .try_for_each(|todo| todo.save_to_file(&path, true))
     }
 
     pub fn add(&mut self, task: Todo) {
@@ -93,4 +105,3 @@ impl TodoList {
         }
     }
 }
-
