@@ -1,6 +1,7 @@
 mod commands;
 mod parser;
 mod todo;
+mod utils;
 
 use parser::parse_command;
 

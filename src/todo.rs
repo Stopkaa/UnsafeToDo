@@ -1,10 +1,9 @@
 use chrono::{DateTime, NaiveDate, Utc};
-use dirs::data_local_dir;
 use serde::{Deserialize, Serialize};
 use std::fs::OpenOptions;
-use std::fs::{self, File,};
+use std::fs::File;
 use std::io::{self,Write, BufRead, BufReader};
-use std::path::PathBuf;
+use crate::utils;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Todo {
@@ -30,22 +29,11 @@ impl Todo {
         }
     }
 
-    fn get_data_path() -> PathBuf {
-        let mut path = data_local_dir().unwrap_or_else(|| PathBuf::from("."));
-        path.push("unsafe_todo");
-        fs::create_dir_all(&path).ok();
-        path.push("todos.txt");
-        path
-    }
-
-    pub fn save_to_file(&self, path: &str, append: bool) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn save_to_file(&self) -> Result<(), Box<dyn std::error::Error>> {
         let as_json = serde_json::to_string(self)?;
-        let path = Self::get_data_path();
-        //as_cbor.push(b'\n');
-        let mut file = OpenOptions::new().create(true).append(append).open(path)?;
-
+        let path = utils::get_data_path();
+        let mut file = OpenOptions::new().create(true).append(true).open(path)?;
         writeln!(file, "{}", as_json)?;
-
         Ok(())
     }
 }
@@ -60,15 +48,8 @@ impl TodoList {
         TodoList { todos: Vec::new() }
     }
 
-    fn get_data_path() -> PathBuf {
-        let mut path = data_local_dir().unwrap_or_else(|| PathBuf::from("."));
-        path.push("unsafe_todo");
-        fs::create_dir_all(&path).ok();
-        path.push("todos.txt");
-        path
-    }
-    pub fn load() -> io::Result<Self> {
-        let path = Self::get_data_path();
+   pub fn load() -> io::Result<Self> {
+        let path = utils::get_data_path();
         if !path.exists() {
             return Ok(TodoList::new());
         }
@@ -85,12 +66,11 @@ impl TodoList {
     }
 
     pub fn save(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let path = Self::get_data_path();
-        let path = path.to_str().unwrap_or("todo.txt");
+        let path = utils::get_data_path();
         File::create(path)?;
         self.todos
             .iter()
-            .try_for_each(|todo| todo.save_to_file(&path, true))
+            .try_for_each(|todo| todo.save_to_file())
     }
 
     pub fn add(&mut self, task: Todo) {
