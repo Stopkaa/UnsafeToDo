@@ -32,7 +32,8 @@ impl Todo {
     }
 
     pub fn save_to_file(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
-        let as_cbor = serde_cbor::to_vec(self)?;
+        let mut as_cbor = serde_cbor::to_vec(self)?;
+        //as_cbor.push(b'\n');
         let mut file = OpenOptions::new()
             .create(true) 
             .append(true)

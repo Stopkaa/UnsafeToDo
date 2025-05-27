@@ -9,7 +9,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match parse_command(&args) {
         Some(cmd) => {
-            cmd.execute(&args[1..]);
+            if let Err(e) = cmd.execute(&args[1..]) {
+                eprintln!("{}", e);
+            }
         }
         None => {
             eprintln!("Unknown or missing command.");
