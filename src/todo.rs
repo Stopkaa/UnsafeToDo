@@ -1,9 +1,26 @@
+use crate::utils;
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
-use std::fs::OpenOptions;
 use std::fs::File;
-use std::io::{self,Write, BufRead, BufReader};
-use crate::utils;
+use std::fs::OpenOptions;
+use std::io::{self, BufRead, BufReader, Write};
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub enum Priority {
+    Low,
+    Medium,
+    High,
+}
+
+impl Priority {
+    pub fn to_string(&self) -> String {
+        match self {
+            Priority::Low => String::from("Low"),
+            Priority::Medium => String::from("Medium"),
+            Priority::High => String::from("High"),
+        }
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Todo {
@@ -11,7 +28,7 @@ pub struct Todo {
     title: String,
     description: Option<String>,
     finished: bool,
-    priority: u32,
+    priority: Priority,
     created_at: DateTime<Utc>,
     due_date: Option<NaiveDate>,
 }
@@ -23,7 +40,7 @@ impl Todo {
             title,
             description: None,
             finished: false,
-            priority: 0,
+            priority: Priority::Low,
             created_at: Utc::now(),
             due_date: None,
         }
@@ -35,6 +52,43 @@ impl Todo {
         let mut file = OpenOptions::new().create(true).append(true).open(path)?;
         writeln!(file, "{}", as_json)?;
         Ok(())
+    }
+
+    pub fn is_finished(&self) -> bool {
+        self.finished
+    }
+
+    pub fn is_overdue(&self) -> bool {
+        if let Some(due) = &self.due_date {
+            let today = chrono::Utc::now().date_naive();
+            due < &today
+        } else {
+            false
+        }
+    }
+
+    pub fn get_title(&self) -> String {
+        self.title.clone()
+    }
+
+    pub fn get_id(&self) -> u32 {
+        self.id
+    }
+
+    pub fn get_description(&self) -> String {
+        self.description.clone().unwrap_or_default()
+    }
+
+    pub fn get_creation_date(&self) -> DateTime<Utc> {
+        self.created_at
+    }
+
+    pub fn get_due_date(&self) -> Option<NaiveDate> {
+        self.due_date
+    }
+
+    pub fn get_priority(&self) -> &Priority {
+        &self.priority
     }
 }
 
@@ -48,7 +102,7 @@ impl TodoList {
         TodoList { todos: Vec::new() }
     }
 
-   pub fn load() -> io::Result<Self> {
+    pub fn load() -> io::Result<Self> {
         let path = utils::get_data_path();
         if !path.exists() {
             return Ok(TodoList::new());
@@ -59,8 +113,10 @@ impl TodoList {
 
         for line in reader.lines() {
             let line = line?;
-            let todo: Todo = serde_json::from_str(&line)?;
-            list.todos.push(todo);
+            if !line.trim().is_empty() {
+                let todo: Todo = serde_json::from_str(&line)?;
+                list.add(todo);
+            }
         }
         Ok(list)
     }
@@ -68,9 +124,7 @@ impl TodoList {
     pub fn save(&self) -> Result<(), Box<dyn std::error::Error>> {
         let path = utils::get_data_path();
         File::create(path)?;
-        self.todos
-            .iter()
-            .try_for_each(|todo| todo.save_to_file())
+        self.todos.iter().try_for_each(|todo| todo.save_to_file())
     }
 
     pub fn add(&mut self, task: Todo) {
