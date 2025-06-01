@@ -90,6 +90,10 @@ impl Todo {
     pub fn get_priority(&self) -> &Priority {
         &self.priority
     }
+
+    pub fn set_id(&mut self, id: u32){
+        self.id = id;
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -111,10 +115,11 @@ impl TodoList {
         let file = File::open(path)?;
         let reader = BufReader::new(file);
 
-        for line in reader.lines() {
+        for (i, line) in reader.lines().enumerate() {
             let line = line?;
             if !line.trim().is_empty() {
-                let todo: Todo = serde_json::from_str(&line)?;
+                let mut todo: Todo = serde_json::from_str(&line)?;
+                todo.set_id(i as u32);
                 list.add(todo);
             }
         }
