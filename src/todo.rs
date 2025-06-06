@@ -67,6 +67,10 @@ impl Todo {
         }
     }
 
+    pub fn complete(&mut self, complete: bool) {
+        self.finished = complete;
+    }
+
     pub fn get_title(&self) -> String {
         self.title.clone()
     }
@@ -142,5 +146,13 @@ impl TodoList {
         } else {
             None
         }
+    }
+
+    pub fn get_todo(&self, id: usize) -> Option<&Todo> {
+        self.todos.get(id)
+    }
+    
+    pub fn get_todo_mut(&mut self, id: usize) -> Option<&mut Todo> {
+        self.todos.get_mut(id)
     }
 }
