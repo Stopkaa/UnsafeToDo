@@ -14,7 +14,7 @@ impl Command for UpdateCommand {
 
         let id = args[0].parse::<i32>()?;
         let mut todo_list = TodoList::load().unwrap();
-        if let Some(todo ) = todo_list.get_todo_mut(id) {
+        if let Some(todo ) = todo_list.get_todo_mut(id as usize) {
             for arg in args.iter().skip(1) {
             }
             todo.complete(true);
@@ -32,7 +32,7 @@ pub struct ArgParser;
 
 impl ArgParser {
     pub fn parse_args_to_map(&self, args: &[String]) -> Result<HashMap<String, String>, Box<dyn Error>> {
-        :
+        Ok(HashMap::new()) //TODO
     }   
     
 }

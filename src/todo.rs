@@ -4,23 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::{self, BufRead, BufReader, Write};
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub enum Priority {
-    Low,
-    Medium,
-    High,
-}
-
-impl Priority {
-    pub fn to_string(&self) -> String {
-        match self {
-            Priority::Low => String::from("Low"),
-            Priority::Medium => String::from("Medium"),
-            Priority::High => String::from("High"),
-        }
-    }
-}
+use crate::priority::Priority;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Todo {
@@ -99,6 +83,75 @@ impl Todo {
         self.id = id;
     }
 }
+
+
+// --------- Builder ------------
+
+pub struct TodoBuilder {
+    id: u32,
+    title: Option<String>,
+    description: Option<String>,
+    finished: bool,
+    priority: Priority,
+    created_at: DateTime<Utc>,
+    due_date: Option<NaiveDate>,
+}
+
+impl TodoBuilder {
+    pub fn new() -> Self {
+        Self {
+            id: 0,
+            title: None,
+            description: None,
+            finished: false,
+            priority: Priority::Low,
+            created_at: Utc::now(),
+            due_date: None,
+        }
+    }
+
+    pub fn title(mut self, title: impl Into<String>) -> Self {
+        self.title = Some(title.into());
+        self
+    }
+
+    pub fn description(mut self, description: impl Into<String>) -> Self {
+        self.description = Some(description.into());
+        self
+    }
+
+    pub fn finished(mut self, finished: bool) -> Self {
+        self.finished = finished;
+        self
+    }
+
+    pub fn priority(mut self, priority: Priority) -> Self {
+        self.priority = priority;
+        self
+    }
+
+    pub fn due_date(mut self, due_date: NaiveDate) -> Self {
+        self.due_date = Some(due_date);
+        self
+    }
+
+    pub fn build(self) -> Result<Todo, String> {
+        if let Some(title) = self.title {
+            Ok(Todo {
+                id: self.id,
+                title,
+                description: self.description,
+                finished: self.finished,
+                priority: self.priority,
+                created_at: self.created_at,
+                due_date: self.due_date,
+            })
+        } else {
+            Err("Title is required".into())
+        }
+    }
+}
+//-------------------------
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TodoList {

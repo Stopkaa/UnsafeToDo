@@ -3,23 +3,25 @@ mod parser;
 mod todo;
 mod utils;
 mod display;
+mod argument;
 
-use parser::parse_command;
+mod priority;
+
+use parser::parse_args;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
 
-    match parse_command(&args) {
-        Some(cmd) => {
-            if let Err(e) = cmd.execute(&args[1..]) {
-                eprintln!("{}", e);
-            }
+    if let Some(parsed) = parse_args(&args) {
+        if let Some(command) = parsed.to_command() {
+            command.execute(&parsed)?;
+        } else {
+            println!("Unknown command: {}", parsed.command);
         }
-        None => {
-            eprintln!("Unknown or missing command.");
-            print_help();
-        }
+    } else {
+        println!("No command provided");
     }
+
     Ok(())
 }
 
