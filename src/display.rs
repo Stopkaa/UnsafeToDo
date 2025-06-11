@@ -45,7 +45,7 @@ impl TodoDisplay {
             .to_string();
         let due_date = todo
             .get_due_date()
-            .map(|date| date.format("%H:%M %d.%m.%Y").to_string())
+            .map(|date| date.format("%d.%m.%Y").to_string())
             .unwrap_or_default();
 
         Self {

@@ -4,14 +4,19 @@ use crate::todo::TodoList;
 use dirs::data_local_dir;
 use std::fs;
 use std::path::PathBuf;
+use crate::parser::ParsedCommand;
 
 #[derive(Debug)]
 pub struct ShowCommand;
 
 impl Command for ShowCommand {
-    fn execute(&self, args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
+    fn execute(&self, parsed: &ParsedCommand) -> Result<(), Box<dyn std::error::Error>> {
         //show_todo()
         show_todo_pretty()
+    }
+
+    fn description(&self) -> &'static str {
+        "Shows all todos in the list"
     }
 }
 

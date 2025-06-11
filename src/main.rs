@@ -16,10 +16,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Some(command) = parsed.to_command() {
             command.execute(&parsed)?;
         } else {
-            println!("Unknown command: {}", parsed.command);
+            println!("Unknown command: {}, use help for more details", parsed.command);
         }
     } else {
-        println!("No command provided");
+        println!("No command provided, use help for more details");
     }
 
     Ok(())

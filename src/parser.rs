@@ -1,16 +1,13 @@
-use crate::commands::Command;
+use crate::commands::{all_commands, Command};
 use crate::commands::{add::AddCommand, show::ShowCommand, remove::RemoveCommand, complete::CompleteCommand};
 
 
 impl ParsedCommand {
     pub fn to_command(&self) -> Option<Box<dyn Command>> {
-        match self.command.as_str() {
-            "add" => Some(Box::new(AddCommand)),
-            "show" => Some(Box::new(ShowCommand)),
-            "remove" => Some(Box::new(RemoveCommand)),
-            "complete" => Some(Box::new(CompleteCommand)),
-            _ => None,
-        }
+        all_commands()
+            .into_iter()
+            .find(|(name, _)| name == &self.command)
+            .map(|(_, cmd)| cmd)
     }
 }
 
