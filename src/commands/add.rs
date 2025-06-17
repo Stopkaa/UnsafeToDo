@@ -1,4 +1,4 @@
-use crate::argument::ArgumentMeta;
+pub(crate) use crate::argument::{description_argument, due_date_argument, priority_argument, ArgumentMeta};
 use crate::parser::ParsedCommand;
 use crate::priority::Priority;
 use crate::todo::TodoBuilder;
@@ -60,30 +60,6 @@ impl Command for AddCommand {
 
     fn description(&self) -> &'static str {
         "Adds a new todo item with optional priority, due date, and description."
-    }
-}
-
-pub fn priority_argument() -> ArgumentMeta {
-    ArgumentMeta {
-        name: "priority".to_string(),
-        prefix: "p".to_string(),
-        help: "Optional priority, e.g. -p high".to_string(),
-    }
-}
-
-pub fn due_date_argument() -> ArgumentMeta {
-    ArgumentMeta {
-        name: "due_date".to_string(),
-        prefix: "d".to_string(),
-        help: "Optional due date, e.g. -d DD.MM.YYYY".to_string(),
-    }
-}
-
-pub fn description_argument() -> ArgumentMeta {
-    ArgumentMeta {
-        name: "description".to_string(),
-        prefix: "m".to_string(),
-        help: "m for memo, optional description, e.g. -m \"Task details\"".to_string(),
     }
 }
 

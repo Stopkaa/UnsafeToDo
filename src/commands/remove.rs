@@ -8,7 +8,7 @@ impl Command for RemoveCommand {
         let mut todo_list = TodoList::load().unwrap();
         if let Some(index_str) = &parsed.positional {
             if let Ok(index) = index_str.parse::<usize>() {
-                if let Some(removed) = todo_list.remove(index - 1) {
+                if let Some(removed) = todo_list.remove(index) {
                     todo_list.save()?;
                     println!("removed TODO: {:?}", removed);
                 } else {
