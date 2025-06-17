@@ -13,6 +13,7 @@ pub mod remove;
 pub mod complete;
 pub mod update;
 pub mod help;
+
 pub trait Command {
     fn execute(&self, parsed: &ParsedCommand) -> Result<(), Box<dyn std::error::Error>>;
 

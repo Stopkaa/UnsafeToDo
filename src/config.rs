@@ -134,17 +134,7 @@ impl Config {
         println!("   Todos file: {}", self.get_todos_file_path().display());
         println!("   Auto-sync: {}", if self.auto_sync_enabled { "✅ Enabled" } else { "❌ Disabled" });
         
-        // Check if data path is a git repository (using external function)
-        if crate::git_sync::is_git_repository(&self.data_path) {
-            println!("   Git repository: ✅ Found");
-        } else {
-            println!("   Git repository: ❌ Not found");
-            if self.auto_sync_enabled {
-                println!("   ⚠️  Auto-sync is enabled but no git repository found!");
-            }
-        }
-        
-        // Show if todos file exists
+                // Show if todos file exists
         let todos_file = self.get_todos_file_path();
         if todos_file.exists() {
             println!("   Todos file: ✅ Exists");
@@ -171,15 +161,6 @@ impl Config {
             Err(_) => {
                 return Err(format!("Data path is not writable: {}", self.data_path.display()).into());
             }
-        }
-        
-        // If auto-sync is enabled, validate git repository exists
-        if self.auto_sync_enabled && !crate::git_sync::is_git_repository(&self.data_path) {
-            return Err(format!(
-                "Auto-sync is enabled but no git repository found at: {}\nPlease run: cd {} && git init", 
-                self.data_path.display(),
-                self.data_path.display()
-            ).into());
         }
         
         Ok(())
@@ -241,40 +222,6 @@ pub fn set_data_path(new_path: PathBuf) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-/// Enable auto-sync
-pub fn enable_auto_sync() -> Result<(), Box<dyn Error>> {
-    let mut config = Config::load()?;
-    
-    // Validate that data path is a git repository
-    if !crate::git_sync::is_git_repository(&config.data_path) {
-        return Err(format!(
-            "Cannot enable auto-sync: Data directory is not a git repository: {}\nPlease run: cd {} && git init",
-            config.data_path.display(),
-            config.data_path.display()
-        ).into());
-    }
-    
-    config.set_auto_sync(true)?;
-    println!("✅ Auto-sync enabled");
-    Ok(())
-}
-
-/// Disable auto-sync
-pub fn disable_auto_sync() -> Result<(), Box<dyn Error>> {
-    let mut config = Config::load()?;
-    config.set_auto_sync(false)?;
-    println!("✅ Auto-sync disabled");
-    Ok(())
-}
-
-/// Check if auto-sync is enabled
-pub fn is_auto_sync_enabled() -> bool {
-    match Config::load() {
-        Ok(config) => config.auto_sync_enabled,
-        Err(_) => false,
-    }
-}
-
 /// Validate current configuration
 pub fn validate_config() -> Result<(), Box<dyn Error>> {
     let config = Config::load()?;
@@ -311,27 +258,4 @@ pub fn reset_config() -> Result<(), Box<dyn Error>> {
     let new_config = Config::load()?; // Creates new default config
     println!("✅ Configuration reset to defaults");
     new_config.show()
-}
-
-/// Perform auto-sync if enabled and valid
-pub fn auto_sync_if_enabled() -> Result<(), Box<dyn Error>> {
-    let config = Config::load()?;
-    
-    if !config.auto_sync_enabled {
-        return Ok(()); // Auto-sync disabled
-    }
-    
-    // Validate git repository exists
-    if !crate::git_sync::is_git_repository(&config.data_path) {
-        // Auto-sync enabled but no git repo - disable it
-        let mut config = config;
-        config.set_auto_sync(false)?;
-        println!("⚠️  Auto-sync disabled: No git repository found");
-        return Ok(());
-    }
-    
-    // Perform sync using git module
-    crate::git_sync::sync_repository(&config.data_path)?;
-    
-    Ok(())
 }
