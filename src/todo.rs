@@ -1,6 +1,6 @@
-use crate::utils;
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
+use crate::config;
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::{self, BufRead, BufReader, Write};
@@ -32,7 +32,7 @@ impl Todo {
 
     pub fn save_to_file(&self) -> Result<(), Box<dyn std::error::Error>> {
         let as_json = serde_json::to_string(self)?;
-        let path = utils::get_data_path();
+        let path = config::get_data_path();
         let mut file = OpenOptions::new().create(true).append(true).open(path)?;
         writeln!(file, "{}", as_json)?;
         Ok(())
@@ -164,7 +164,7 @@ impl TodoList {
     }
 
     pub fn load() -> io::Result<Self> {
-        let path = utils::get_data_path();
+        let path = config::get_data_path();
         if !path.exists() {
             return Ok(TodoList::new());
         }
@@ -184,7 +184,7 @@ impl TodoList {
     }
 
     pub fn save(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let path = utils::get_data_path();
+        let path = config::get_data_path();
         File::create(path)?;
         self.todos.iter().try_for_each(|todo| todo.save_to_file())
     }
