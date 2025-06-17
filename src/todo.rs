@@ -82,6 +82,30 @@ impl Todo {
     pub fn set_id(&mut self, id: u32){
         self.id = id;
     }
+    
+    pub fn set_title(&mut self, title: String){
+        self.title = title;
+    }
+    
+    pub fn set_description(&mut self, description: String){
+        self.description = Some(description);
+    }
+    
+    pub fn set_priority(&mut self, priority: Priority){
+        self.priority = priority;
+    }
+    
+    pub fn set_due_date(&mut self, due_date: NaiveDate) {
+        self.due_date = Some(due_date);
+    }
+    
+    pub fn set_finished(&mut self, finished: bool) {
+        self.finished = finished;
+    }
+    
+    pub fn set_creation_date(&mut self, creation_date: DateTime<Utc>) {
+        self.created_at = creation_date;
+    }
 }
 
 
