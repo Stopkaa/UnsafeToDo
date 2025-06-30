@@ -9,6 +9,8 @@ pub struct Config {
     pub data_path: PathBuf,
     /// Whether auto-sync is enabled
     pub auto_sync_enabled: bool,
+    /// Optional git remote to sync with
+    pub git_remote: Option<String>,
 }
 
 impl Config {
@@ -43,6 +45,7 @@ impl Config {
         Ok(Config {
             data_path: Self::default_data_path()?,
             auto_sync_enabled: false,
+            git_remote: None,
         })
     }
     

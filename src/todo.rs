@@ -5,6 +5,7 @@ use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::{self, BufRead, BufReader, Write};
 use crate::priority::Priority;
+use crate::sync;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Todo {
@@ -29,14 +30,26 @@ impl Todo {
             due_date: None,
         }
     }
-
+    
     pub fn save_to_file(&self) -> Result<(), Box<dyn std::error::Error>> {
         let as_json = serde_json::to_string(self)?;
         let path = config::get_data_path();
-        let mut file = OpenOptions::new().create(true).append(true).open(path)?;
+
+        let mut file = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&path)?;
+
         writeln!(file, "{}", as_json)?;
+
+        // Git-Sync nach erfolgreichem Speichern
+        if let Err(e) = sync::sync_file(path.to_str().unwrap_or("todo.json")) {
+            eprintln!("⚠️ Git-Sync fehlgeschlagen: {}", e);
+        }
+
         Ok(())
     }
+
 
     pub fn is_finished(&self) -> bool {
         self.finished
