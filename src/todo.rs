@@ -5,6 +5,8 @@ use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::{self, BufRead, BufReader, Write};
 use crate::priority::Priority;
+use std::cmp::Ordering;
+use crate::sort_order::SortOrder;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Todo {
@@ -81,6 +83,87 @@ impl Todo {
 
     pub fn set_id(&mut self, id: u32){
         self.id = id;
+    }
+
+    /// Compare todos by the given sort order (supports chained criteria)
+    pub fn compare(&self, other: &Todo, sort_order: &SortOrder) -> Ordering {
+        let result = self.compare_single_criterion(other, sort_order);
+        
+        if result == Ordering::Equal {
+            if let Some(next_criterion) = sort_order.get_next() {
+                return self.compare(other, next_criterion);
+            }
+        }
+        
+        result
+    }
+
+    /// Compare todos by a single criterion
+    fn compare_single_criterion(&self, other: &Todo, sort_order: &SortOrder) -> Ordering {
+        match sort_order {
+            SortOrder::Priority(_) => {
+                // High > Medium > Low
+                let self_priority = self.priority.priority_value();
+                let other_priority = other.priority.priority_value();
+                other_priority.cmp(&self_priority) // Reverse for High->Low order
+            }
+            SortOrder::PriorityReverse(_) => {
+                // Low > Medium > High
+                let self_priority = self.priority.priority_value();
+                let other_priority = other.priority.priority_value();
+                self_priority.cmp(&other_priority)
+            }
+            SortOrder::CreatedDesc(_) => {
+                // Newest first
+                other.created_at.cmp(&self.created_at)
+            }
+            SortOrder::CreatedAsc(_) => {
+                // Oldest first
+                self.created_at.cmp(&other.created_at)
+            }
+            SortOrder::DueDate(_) => {
+                // Earliest due date first, no due date last
+                match (&self.due_date, &other.due_date) {
+                    (Some(self_due), Some(other_due)) => self_due.cmp(other_due),
+                    (Some(_), None) => Ordering::Less,
+                    (None, Some(_)) => Ordering::Greater,
+                    (None, None) => Ordering::Equal,
+                }
+            }
+            SortOrder::DueDateReverse(_) => {
+                // Latest due date first, no due date last
+                match (&self.due_date, &other.due_date) {
+                    (Some(self_due), Some(other_due)) => other_due.cmp(self_due),
+                    (Some(_), None) => Ordering::Less,
+                    (None, Some(_)) => Ordering::Greater,
+                    (None, None) => Ordering::Equal,
+                }
+            }
+            SortOrder::TitleAsc(_) => {
+                // A-Z
+                self.title.to_lowercase().cmp(&other.title.to_lowercase())
+            }
+            SortOrder::TitleDesc(_) => {
+                // Z-A
+                other.title.to_lowercase().cmp(&self.title.to_lowercase())
+            }
+            SortOrder::Status(_) => {
+                // Unfinished first
+                match (self.finished, other.finished) {
+                    (false, true) => Ordering::Less,
+                    (true, false) => Ordering::Greater,
+                    _ => Ordering::Equal,
+                }
+            }
+            SortOrder::StatusReverse(_) => {
+                // Finished first
+                match (self.finished, other.finished) {
+                    (true, false) => Ordering::Less,
+                    (false, true) => Ordering::Greater,
+                    _ => Ordering::Equal,
+                }
+            }
+        }
     }
 }
 
@@ -207,5 +290,10 @@ impl TodoList {
     
     pub fn get_todo_mut(&mut self, id: usize) -> Option<&mut Todo> {
         self.todos.get_mut(id)
+    }
+
+    /// Sort todos by the given sort order
+    pub fn sort_by_order(&mut self, sort_order: &SortOrder) {
+        self.todos.sort_by(|a, b| a.compare(b, sort_order));
     }
 }

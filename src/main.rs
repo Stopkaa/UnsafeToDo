@@ -4,7 +4,7 @@ mod todo;
 mod utils;
 mod display;
 mod argument;
-
+mod sort_order;
 mod priority;
 //mod sync;
 mod config;

@@ -2,13 +2,16 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::fs;
+use crate::sort_order::SortOrder;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Config {
     /// Path where todos.json is stored
-    pub data_path: PathBuf,
+    data_path: PathBuf,
     /// Whether auto-sync is enabled
-    pub auto_sync_enabled: bool,
+    auto_sync_enabled: bool,
+    // Sort order
+    sort_order: SortOrder,
 }
 
 impl Config {
@@ -38,11 +41,11 @@ impl Config {
         Ok(app_data_dir)
     }
     
-    /// Create default config
-    fn default() -> Result<Self, Box<dyn Error>> {
+     fn default() -> Result<Self, Box<dyn Error>> {
         Ok(Config {
             data_path: Self::default_data_path()?,
             auto_sync_enabled: false,
+            sort_order: SortOrder::default(),
         })
     }
     
@@ -123,6 +126,18 @@ impl Config {
             // fs::remove_file(&old_todos_file)?;
         }
         
+        Ok(())
+    }
+
+    /// Get current sort order
+    pub fn get_sort_order(&self) -> &SortOrder {
+        &self.sort_order
+    }
+
+    /// Set sort order and save config
+    pub fn set_sort_order(&mut self, sort_order: SortOrder) -> Result<(), Box<dyn Error>> {
+        self.sort_order = sort_order;
+        self.save()?;
         Ok(())
     }
     
@@ -258,4 +273,18 @@ pub fn reset_config() -> Result<(), Box<dyn Error>> {
     let new_config = Config::load()?; // Creates new default config
     println!("✅ Configuration reset to defaults");
     new_config.show()
+}
+
+/// Get current sort order from config
+pub fn get_sort_order() -> Result<SortOrder, Box<dyn Error>> {
+    let config = Config::load()?;
+    Ok(config.sort_order.clone())
+}
+
+/// Set sort order in config
+pub fn set_sort_order(sort_order: SortOrder) -> Result<(), Box<dyn Error>> {
+    let mut config = Config::load()?;
+    config.set_sort_order(sort_order.clone())?;
+    println!("✅ Sort order updated to: {}", sort_order);
+    Ok(())
 }
