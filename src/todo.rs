@@ -2,10 +2,9 @@ use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use crate::config;
 use std::fs::File;
-use std::fs::OpenOptions;
 use std::io::{self, BufRead, BufReader, Write};
 use crate::priority::Priority;
-use crate::sync;
+use crate::sync::GitRepo;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Todo {
@@ -34,6 +33,7 @@ impl Todo {
     pub fn save_to_file(&self) -> Result<(), Box<dyn std::error::Error>> {
         let as_json = serde_json::to_string(self)?;
         let path = config::get_data_path();
+        let data_dir = config::get_data_dir()?;
 
         let mut file = std::fs::OpenOptions::new()
             .create(true)
@@ -42,9 +42,10 @@ impl Todo {
 
         writeln!(file, "{}", as_json)?;
 
-        // Git-Sync nach erfolgreichem Speichern
-        if let Err(e) = sync::sync_file(path.to_str().unwrap_or("todo.json")) {
-            eprintln!("⚠️ Git-Sync fehlgeschlagen: {}", e);
+        let repo = GitRepo::new(data_dir);
+
+        if let Err(e) = repo.sync_file("todos.json") { //TODO "todos.json" auch config
+            eprintln!("⚠️ Git sync failed: {}", e);
         }
 
         Ok(())

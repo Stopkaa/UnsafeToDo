@@ -1,116 +1,112 @@
-use std::process::{Command, Stdio};
-use std::io::{self, Write};
-use std::path::Path;
 use std::fs;
+use std::io::{self};
+use std::path::PathBuf;
+use std::process::{Command, Output};
 
-/// Führt einen Git-Befehl aus und gibt das Ergebnis zurück.
-/// Gibt Fehler und Ausgaben auf der Konsole aus.
-fn run_git_command(args: &[&str]) -> io::Result<()> {
-    let git_dir = "/home/torben/.local/share/unsafeToDo"; // oder besser: über `Config`
-
-    let status = Command::new("git")
-        .arg("-C")
-        .arg(git_dir)
-        .args(args)
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .status()?;
-
-    if !status.success() {
-        eprintln!("Git-Befehl fehlgeschlagen: git {}", args.join(" "));
-    }
-    Ok(())
+pub struct GitRepo {
+    path: PathBuf,
 }
 
-/// Führt `git pull` aus, um aktuelle Änderungen vom Remote zu holen.
-pub fn git_pull() -> io::Result<()> {
-    println!("🔄 Pulling changes from origin...");
-    run_git_command(&["pull", "origin", "main"])
-}
-
-/// Führt `git add <file>` aus.
-fn git_add(file: &str) -> io::Result<()> {
-    run_git_command(&["add", file])
-}
-
-/// Führt `git commit -m <msg>` aus.
-fn git_commit(message: &str) -> io::Result<()> {
-    run_git_command(&["commit", "-m", message])
-}
-
-/// Führt `git push` aus.
-fn git_push() -> io::Result<()> {
-    println!("📤 Pushing changes to origin...");
-    run_git_command(&["push", "origin", "main"])
-}
-
-/// Führt einen kompletten Synchronisationsvorgang durch.
-/// - Pullt neue Änderungen
-/// - Fügt die Datei hinzu
-/// - Committet sie
-/// - Pusht sie
-pub fn sync_file(file: &str) -> io::Result<()> {
-    git_pull()?;                      // Änderungen vom Server holen
-    git_add(file)?;                  // Datei zum Commit hinzufügen
-    git_commit("Update todo list")?; // Commit erstellen
-    git_push()?;                     // Hochladen
-    Ok(())
-}
-
-pub fn setup_repo(path: &Path, remote_url: Option<&str>) -> io::Result<()> {
-    if path.join(".git").exists() {
-        println!("Git-Repo existiert bereits.");
-        return Ok(());
+impl GitRepo {
+    pub fn new(path: impl Into<PathBuf>) -> Self {
+        let path = path.into();
+        //println!("Initializing GitRepo with path: {}", path.display());
+        GitRepo { path }
     }
 
-    if let Some(remote) = remote_url {
-        println!("Klonen von Remote-Repo: {}", remote);
-        // `git clone <remote> <path>`
-        let status = Command::new("git")
-            .args(&["clone", remote, path.to_str().unwrap()])
-            .status()?;
-        if !status.success() {
-            eprintln!("Fehler beim Klonen des Repos");
-        }
-    } else {
-        println!("Initialisiere neues lokales Git-Repo");
-        fs::create_dir_all(path)?;
-        let status = Command::new("git")
-            .args(&["init"])
-            .current_dir(path)
-            .status()?;
-        if !status.success() {
-            eprintln!("Fehler bei git init");
+    fn run_git_command(&self, args: &[&str]) -> io::Result<()> {
+        let output: Output = Command::new("git")
+            .arg("-C")
+            .arg(&self.path)
+            .args(args)
+            .output()?;
+
+        if !output.status.success() {
+            eprintln!("Git error: git {}", args.join(" "));
+            eprintln!("stdout:\n{}", String::from_utf8_lossy(&output.stdout));
+            eprintln!("stderr:\n{}", String::from_utf8_lossy(&output.stderr));
         }
 
-        // Leere todos.json erstellen, falls noch nicht vorhanden
-        let todos_path = path.join("todos.json");
-        if !todos_path.exists() {
-            fs::write(&todos_path, "[]")?;
+        Ok(())
+    }
+
+    pub fn pull(&self) -> io::Result<()> {
+        println!("Pulling changes from origin...");
+        self.run_git_command(&["pull", "origin", "main"])
+    }
+
+    pub fn add(&self, file: &str) -> io::Result<()> {
+        self.run_git_command(&["add", file])
+    }
+
+    pub fn commit(&self, message: &str) -> io::Result<()> {
+        self.run_git_command(&["commit", "-m", message])
+    }
+
+    pub fn push(&self) -> io::Result<()> {
+        println!("Pushing changes to origin...");
+        self.run_git_command(&["push", "origin", "main"])
+    }
+
+    pub fn sync_file(&self, file: &str) -> io::Result<()> {
+        self.pull()?;
+        self.add(file)?;
+        self.commit("Update todo list")?;
+        self.push()?;
+        Ok(())
+    }
+
+    pub fn setup(&self, remote_url: Option<&str>) -> io::Result<()> {
+        if self.path.join(".git").exists() {
+            println!("Git repository already exists.");
+            return Ok(());
         }
 
-        // Dateien hinzufügen und committen
-        Command::new("git")
-            .args(&["add", "todos.json"])
-            .current_dir(path)
-            .status()?;
-        Command::new("git")
-            .args(&["commit", "-m", "Initial commit"])
-            .current_dir(path)
-            .status()?;
-
-        // Remote origin setzen, falls URL vorhanden
         if let Some(remote) = remote_url {
-            println!("Remote origin hinzufügen: {}", remote);
+            println!("Cloning from remote repository: {}", remote);
             let status = Command::new("git")
-                .args(&["remote", "add", "origin", remote])
-                .current_dir(path)
+                .args(&["clone", remote, self.path.to_str().unwrap()])
                 .status()?;
             if !status.success() {
-                eprintln!("Fehler beim Hinzufügen des Remotes");
+                eprintln!("Failed to clone repository.");
+            }
+        } else {
+            println!("Initializing new local Git repository...");
+            fs::create_dir_all(&self.path)?;
+            let status = Command::new("git")
+                .args(&["init"])
+                .current_dir(&self.path)
+                .status()?;
+            if !status.success() {
+                eprintln!("Failed to initialize repository.");
+            }
+
+            let todos_path = self.path.join("todos.json");
+            if !todos_path.exists() {
+                fs::write(&todos_path, "[]")?;
+            }
+
+            Command::new("git")
+                .args(&["add", "todos.json"])
+                .current_dir(&self.path)
+                .status()?;
+            Command::new("git")
+                .args(&["commit", "-m", "Initial commit"])
+                .current_dir(&self.path)
+                .status()?;
+
+            if let Some(remote) = remote_url {
+                println!("Adding remote origin: {}", remote);
+                let status = Command::new("git")
+                    .args(&["remote", "add", "origin", remote])
+                    .current_dir(&self.path)
+                    .status()?;
+                if !status.success() {
+                    eprintln!("Failed to add remote origin.");
+                }
             }
         }
-    }
 
-    Ok(())
+        Ok(())
+    }
 }

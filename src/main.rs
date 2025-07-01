@@ -10,15 +10,18 @@ mod priority;
 //mod sync;
 mod config;
 use parser::parse_args;
+use crate::sync::GitRepo;
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    //config::load_config()?;
+    
+    //config laden
+    let conf = config::load_config()?;
+    let data_dir = config::get_data_dir()?;
+    let remote_url = conf.git_remote.as_deref(); //wenns remote repo gibt und in config eingetragen
 
-    let config = config::load_config()?;
-    let data_path = config.data_path;
-    let remote_url = config.git_remote.as_deref(); // Option<&str>
-
-    sync::setup_repo(&data_path, remote_url)?;
+    let git_repo = GitRepo::new(data_dir);
+    git_repo.setup(remote_url)?;
     
     if let Some(parsed) = parse_args(&args) {
         if let Some(command) = parsed.to_command() {
