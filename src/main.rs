@@ -9,6 +9,7 @@ mod priority;
 //mod sync;
 mod config;
 use parser::parse_args;
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     config::load_config()?;
@@ -23,11 +24,4 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
-}
-
-fn print_help() {
-    println!("Help:");
-    println!("  unsafe_todo add \"TODO\"");
-    println!("  unsafe_todo show");
-    println!("  unsafe_todo remove <index>");
 }
