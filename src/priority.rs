@@ -28,7 +28,7 @@ impl Priority {
 
 // Implementierung von FromStr für Priority
 impl FromStr for Priority {
-    type Err = String; // Du kannst hier auch einen eigenen Error-Typ machen
+    type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {

@@ -2,24 +2,19 @@ use crate::commands::Command;
 use crate::parser::ParsedCommand;
 use crate::todo::TodoList;
 pub struct RemoveCommand;
-//TODO remove mit id statt index
+
 impl Command for RemoveCommand {
     fn execute(&self, parsed: &ParsedCommand) -> Result<(), Box<dyn std::error::Error>> {
         let mut todo_list = TodoList::load().unwrap();
-        if let Some(index_str) = &parsed.positional {
-            if let Ok(index) = index_str.parse::<usize>() {
-                if let Some(removed) = todo_list.remove(index) {
-                    todo_list.save()?;
-                    println!("removed TODO: {:?}", removed);
-                } else {
-                    println!("Error: Wrong Index.");
-                }
-            } else {
-                println!("Error: '{}' no valid number", index_str);
-            }
-        } else {
-            println!("Error: No index specified.");
-        }
+        let id = parsed.positional.as_deref().ok_or("No ID provided")?;
+        let id = id.parse()
+            .map_err(|_| format!("Invalid ID format: '{}'", id))?;
+
+        let removed = todo_list.remove(id)
+            .ok_or_else(|| format!("Todo with ID {} not found", id))?;
+        
+        todo_list.save()?;
+        println!("removed TODO: {:?}", removed);
         Ok(())
     }
 

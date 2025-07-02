@@ -4,7 +4,7 @@ use crate::priority::Priority;
 use crate::todo::TodoBuilder;
 use crate::commands::Command;
 use std::str::FromStr;
-use chrono::{NaiveDate, NaiveDateTime};
+use chrono::NaiveDate;
 
 #[derive(Debug)]
 pub struct AddCommand;
@@ -13,7 +13,7 @@ impl Command for AddCommand {
     fn execute(&self, parsed: &ParsedCommand) -> Result<(), Box<dyn std::error::Error>> {
         let title = parsed.positional
             .as_ref()
-            .ok_or_else(|| "Todo title not specified")?;
+            .ok_or("Todo title not specified")?;
 
         let mut builder = TodoBuilder::new().title(title.clone());
 
@@ -48,7 +48,7 @@ impl Command for AddCommand {
 
         }
 
-        let todo = builder.build()?; // ? gibt fehler direkt zurueck
+        let todo = builder.build()?;
         todo.save_to_file()?;
 
         Ok(())
