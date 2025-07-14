@@ -4,12 +4,14 @@ mod todo;
 mod utils;
 mod display;
 mod argument;
+mod sort_order;
 mod sync;
 
 mod priority;
 //mod sync;
 mod config;
 use parser::parse_args;
+
 use crate::sync::GitRepo;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -35,11 +37,4 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
-}
-
-fn print_help() {
-    println!("Help:");
-    println!("  unsafe_todo add \"TODO\"");
-    println!("  unsafe_todo show");
-    println!("  unsafe_todo remove <index>");
 }

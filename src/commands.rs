@@ -1,3 +1,11 @@
+pub mod add;
+pub mod show;
+pub mod remove;
+pub mod complete;
+pub mod update;
+pub mod help;
+pub mod sort;
+
 use crate::argument::ArgumentMeta;
 use crate::commands::add::AddCommand;
 use crate::commands::complete::CompleteCommand;
@@ -6,13 +14,7 @@ use crate::commands::remove::RemoveCommand;
 use crate::commands::show::ShowCommand;
 use crate::commands::update::UpdateCommand;
 use crate::parser::ParsedCommand;
-
-pub mod add;
-pub mod show;
-pub mod remove;
-pub mod complete;
-pub mod update;
-pub mod help;
+use crate::commands::sort::SortCommand;
 
 pub trait Command {
     fn execute(&self, parsed: &ParsedCommand) -> Result<(), Box<dyn std::error::Error>>;
@@ -33,6 +35,7 @@ pub(crate) fn all_commands() -> Vec<(&'static str, Box<dyn Command>)> {
         ("remove", Box::new(RemoveCommand)),
         ("complete", Box::new(CompleteCommand)),
         ("update", Box::new(UpdateCommand)),
+        ("sort", Box::new(SortCommand)),
         ("help", Box::new(HelpCommand)),
     ]
 }

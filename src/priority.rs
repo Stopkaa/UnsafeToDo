@@ -16,11 +16,19 @@ impl Priority {
             Priority::High => String::from("High"),
         }
     }
+
+    pub fn priority_value(&self) -> u8 {
+        match self {
+            Priority::Low => 1,
+            Priority::Medium => 2, 
+            Priority::High => 3,
+        }
+    }
 }
 
 // Implementierung von FromStr für Priority
 impl FromStr for Priority {
-    type Err = String; // Du kannst hier auch einen eigenen Error-Typ machen
+    type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
