@@ -1,7 +1,7 @@
 pub(crate) use crate::argument::{description_argument, due_date_argument, priority_argument, ArgumentMeta};
 use crate::parser::ParsedCommand;
 use crate::priority::Priority;
-use crate::todo::TodoBuilder;
+use crate::todo::{TodoBuilder, TodoList};
 use crate::commands::Command;
 use std::str::FromStr;
 use chrono::{NaiveDate, NaiveDateTime};
@@ -15,6 +15,7 @@ impl Command for AddCommand {
             .as_ref()
             .ok_or_else(|| "Todo title not specified")?;
 
+        let mut todo_list = TodoList::load().unwrap();
         let mut builder = TodoBuilder::new().title(title.clone());
 
         for arg_meta in self.arguments() {
@@ -49,7 +50,8 @@ impl Command for AddCommand {
         }
 
         let todo = builder.build()?; // ? gibt fehler direkt zurueck
-        todo.save_to_file()?;
+        todo_list.add(todo);
+        todo_list.save()?;
 
         Ok(())
     }

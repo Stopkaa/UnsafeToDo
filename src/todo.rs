@@ -6,7 +6,7 @@ use std::io::{self, BufRead, BufReader, Write};
 use crate::priority::Priority;
 use crate::sync::GitRepo;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Todo {
     id: u32,
     title: String,
@@ -33,7 +33,6 @@ impl Todo {
     pub fn save_to_file(&self) -> Result<(), Box<dyn std::error::Error>> {
         let as_json = serde_json::to_string(self)?;
         let path = config::get_data_path();
-        let data_dir = config::get_data_dir()?;
 
         let mut file = std::fs::OpenOptions::new()
             .create(true)
@@ -41,12 +40,6 @@ impl Todo {
             .open(&path)?;
 
         writeln!(file, "{}", as_json)?;
-
-        let repo = GitRepo::new(data_dir);
-
-        if let Err(e) = repo.sync_file("todos.json") { //TODO "todos.json" auch config
-            eprintln!("⚠️ Git sync failed: {}", e);
-        }
 
         Ok(())
     }
@@ -91,6 +84,10 @@ impl Todo {
 
     pub fn get_priority(&self) -> &Priority {
         &self.priority
+    }
+    
+    pub fn get_finished(&self) -> bool {
+        self.finished
     }
 
     pub fn set_id(&mut self, id: u32){
@@ -148,6 +145,11 @@ impl TodoBuilder {
         }
     }
 
+    pub fn id(mut self, id: u32) -> Self {
+        self.id = id;
+        self
+    }
+
     pub fn title(mut self, title: impl Into<String>) -> Self {
         self.title = Some(title.into());
         self
@@ -191,7 +193,7 @@ impl TodoBuilder {
 }
 //-------------------------
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TodoList {
     pub todos: Vec<Todo>,
 }
@@ -224,7 +226,17 @@ impl TodoList {
     pub fn save(&self) -> Result<(), Box<dyn std::error::Error>> {
         let path = config::get_data_path();
         File::create(path)?;
-        self.todos.iter().try_for_each(|todo| todo.save_to_file())
+        self.todos.iter().try_for_each(|todo| todo.save_to_file())?;
+
+
+        let data_dir = config::get_data_dir()?;
+        let repo = GitRepo::new(data_dir);
+
+        if let Err(e) = repo.sync_file("todos.json") { //TODO "todos.json" auch config
+            eprintln!("Git sync failed: {}", e);
+        }
+        
+        Ok(())
     }
 
     pub fn add(&mut self, task: Todo) {
