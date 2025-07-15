@@ -2,8 +2,9 @@ use std::fs;
 use std::io::{self, Write};
 use std::path::PathBuf;
 use std::process::{Command, Output};
-use crate::display::display_todo_list;
+use crate::display::{display_single_todo, display_todo_list};
 use crate::priority::Priority;
+use crate::todo;
 use crate::todo::{Todo, TodoBuilder, TodoList};
 
 pub struct GitRepo {
@@ -88,14 +89,28 @@ impl GitRepo {
 
                 // Prompt user for choice
                 println!("\nMerge conflict detected:");
-                println!("Local version (HEAD):");
-                for l in &head_block {
-                    println!("    {}", l);
+                //println!("Local version:");
+
+                //for l in &head_block {
+                //    println!("    {}", l);
+                //}
+
+                //println!("Incoming version:");
+                //for l in &incoming_block {
+                //    println!("    {}", l);
+                //}
+
+                let local_todos = todo::todos_from_json_lines(&head_block);
+                let incoming_todos = todo::todos_from_json_lines(&incoming_block);
+
+                println!("Local version:");
+                for todo in &local_todos {
+                    display_single_todo(todo);
                 }
 
                 println!("Incoming version:");
-                for l in &incoming_block {
-                    println!("    {}", l);
+                for todo in &incoming_todos {
+                    display_single_todo(todo);
                 }
 
                 println!("Which version do you want to keep?");

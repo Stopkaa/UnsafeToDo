@@ -89,6 +89,31 @@ pub fn display_todo_list(todo_list: &TodoList) {
     println!("{table}");
 }
 
+pub fn display_single_todo(todo: &Todo) {
+    let todo_display = TodoDisplay::from(todo);
+    let (width, height) = get_terminal_size();
+    let mut table = Table::new(vec![todo_display]);
+
+    table
+        .with(Style::rounded())
+        .with(LineText::new("Todo", Rows::first()).offset(2))
+        .with(Width::wrap(width).priority(Priority::max(true)))
+        .with(Width::increase(width))
+        .with(Height::limit(height))
+        .with(Height::increase(height))
+        .modify(Locator::content("Low"), Color::FG_GREEN)
+        .modify(Locator::content("Medium"), Color::FG_YELLOW)
+        .modify(Locator::content("High"), Color::FG_RED)
+        .modify(Columns::single(3), Alignment::center());
+
+    // Überfällige Todos rot einfärben
+    if todo.is_overdue() && !todo.is_finished() {
+        table.modify(Rows::single(1), Color::FG_RED);
+    }
+
+    println!("{table}");
+}
+
 fn get_terminal_size() -> (usize, usize) {
     let (TerminalWidth(width), TerminalHeight(height)) =
         terminal_size().expect("failed to obtain a terminal size");

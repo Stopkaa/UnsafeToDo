@@ -19,6 +19,7 @@ pub struct Todo {
     due_date: Option<NaiveDate>,
 }
 
+
 impl Todo {
     pub fn new(title: String) -> Self {
         Self {
@@ -30,6 +31,13 @@ impl Todo {
             created_at: Utc::now(),
             due_date: None,
         }
+    }
+
+    pub fn from_json_line(line: &str, id: u32) -> io::Result<Todo> {
+        let mut todo: Todo = serde_json::from_str(line)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+        todo.set_id(id);
+        Ok(todo)
     }
     
     pub fn save_to_file(&self) -> Result<(), Box<dyn std::error::Error>> {
@@ -291,18 +299,18 @@ impl TodoList {
         if !path.exists() {
             return Ok(TodoList::new());
         }
-        let mut list = Self::new();
         let file = File::open(path)?;
         let reader = BufReader::new(file);
+        let mut list = Self::new();
 
         for (i, line) in reader.lines().enumerate() {
             let line = line?;
             if !line.trim().is_empty() {
-                let mut todo: Todo = serde_json::from_str(&line)?;
-                todo.set_id(i as u32);
+                let todo = Todo::from_json_line(&line, i as u32)?;
                 list.add(todo);
             }
         }
+
         Ok(list)
     }
 
@@ -346,4 +354,13 @@ impl TodoList {
     pub fn sort_by_order(&mut self, sort_order: &SortOrder) {
         self.todos.sort_by(|a, b| a.compare(b, sort_order));
     }
+}
+
+pub fn todos_from_json_lines(lines: &[String]) -> Vec<Todo> {
+    lines
+        .iter()
+        .filter_map(|line| {
+            Todo::from_json_line(line, 0).ok()
+        })
+        .collect()
 }
