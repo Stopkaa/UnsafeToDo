@@ -1,5 +1,5 @@
 use crate::commands::Command;
-use crate::display::display_todo_list;
+use crate::display::{display_todo_vector};
 use crate::todo::TodoList;
 use crate::parser::ParsedCommand;
 
@@ -18,6 +18,6 @@ impl Command for ShowCommand {
 
 pub fn show_todo_pretty() -> Result<(), Box<dyn std::error::Error>> {
     let todos = TodoList::load()?;
-    display_todo_list(&todos);
+    display_todo_vector(&todos.todos_as_vec());
     Ok(())
 }

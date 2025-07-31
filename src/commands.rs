@@ -5,10 +5,12 @@ pub mod complete;
 pub mod update;
 pub mod help;
 pub mod sort;
+mod config_command;
 
 use crate::argument::ArgumentMeta;
 use crate::commands::add::AddCommand;
 use crate::commands::complete::CompleteCommand;
+use crate::commands::config_command::ConfigCommand;
 use crate::commands::help::HelpCommand;
 use crate::commands::remove::RemoveCommand;
 use crate::commands::show::ShowCommand;
@@ -37,6 +39,7 @@ pub(crate) fn all_commands() -> Vec<(&'static str, Box<dyn Command>)> {
         ("update", Box::new(UpdateCommand)),
         ("sort", Box::new(SortCommand)),
         ("help", Box::new(HelpCommand)),
+        ("config", Box::new(ConfigCommand)),
     ]
 }
 

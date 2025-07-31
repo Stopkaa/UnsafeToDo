@@ -4,9 +4,12 @@ use std::error::Error;
 use std::fs;
 use crate::sort_order::SortOrder;
 
+pub const TODO_FILE_NAME: &str = "todos.json";
+pub const CONFIG_FILE_NAME: &str = "config.json";
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Config {
-    /// Path where todos.json is stored
+    /// Path where TODO_FILE_NAME is stored
     data_path: PathBuf,
     /// Whether auto-sync is enabled
     pub auto_sync_enabled: bool,
@@ -27,7 +30,7 @@ impl Config {
         // Ensure config directory exists
         fs::create_dir_all(&app_config_dir)?;
         
-        Ok(app_config_dir.join("config.json"))
+        Ok(app_config_dir.join(CONFIG_FILE_NAME))
     }
     
     /// Get default data directory (XDG standard)
@@ -93,9 +96,9 @@ impl Config {
         Ok(())
     }
     
-    /// Get the full path to todos.json
+    /// Get the full path to TODO_FILE_NAME
     pub fn get_todos_file_path(&self) -> PathBuf {
-        self.data_path.join("todos.json")
+        self.data_path.join(TODO_FILE_NAME)
     }
     
     /// Set data path and save config
@@ -114,10 +117,17 @@ impl Config {
         self.save()?;
         Ok(())
     }
+
+    /// Set git remote path and save config
+    pub fn set_git_remote(&mut self, path: String) -> Result<(), Box<dyn Error>> {
+        self.git_remote = Some(path);
+        self.save()?;
+        Ok(())
+    }
     
     /// Move todos from old path to new path
     pub fn migrate_todos(&self, old_path: &PathBuf) -> Result<(), Box<dyn Error>> {
-        let old_todos_file = old_path.join("todos.json");
+        let old_todos_file = old_path.join(TODO_FILE_NAME);
         let new_todos_file = self.get_todos_file_path();
         
         if old_todos_file.exists() && !new_todos_file.exists() {
@@ -151,6 +161,10 @@ impl Config {
         println!("   Data path: {}", self.data_path.display());
         println!("   Todos file: {}", self.get_todos_file_path().display());
         println!("   Auto-sync: {}", if self.auto_sync_enabled { "✅ Enabled" } else { "❌ Disabled" });
+        println!(
+            "   Git remote path: {}",
+            self.git_remote.as_deref().unwrap_or("No Path")
+        );
         
                 // Show if todos file exists
         let todos_file = self.get_todos_file_path();
@@ -197,7 +211,7 @@ pub fn load_config() -> Result<Config, Box<dyn Error>> {
     Config::load()
 }
 
-/// Get the path to todos.json based on current config
+/// Get the path to TODO_FILE_NAME based on current config
 pub fn get_data_path() -> PathBuf {
     match Config::load() {
         Ok(config) => config.get_todos_file_path(),
@@ -206,13 +220,13 @@ pub fn get_data_path() -> PathBuf {
             let mut path = dirs::data_local_dir().unwrap_or_else(|| PathBuf::from("."));
             path.push("unsafe_todo");
             fs::create_dir_all(&path).ok();
-            path.push("todos.json");
+            path.push(TODO_FILE_NAME);
             path
         }
     }
 }
 
-/// Get the data directory (without todos.json)
+/// Get the data directory (without TODO_FILE_NAME)
 pub fn get_data_dir() -> Result<PathBuf, Box<dyn Error>> {
     let config = Config::load()?;
     Ok(config.data_path)
@@ -253,7 +267,7 @@ pub fn init_config() -> Result<(), Box<dyn Error>> {
     let config = Config::load()?; // This creates default if needed
     config.validate()?;
     
-    // Create todos.json if it doesn't exist
+    // Create TODO_FILE_NAME if it doesn't exist
     let todos_file = config.get_todos_file_path();
     if !todos_file.exists() {
         fs::write(&todos_file, "[]")?; // Empty JSON array
@@ -284,6 +298,12 @@ pub fn get_sort_order() -> Result<SortOrder, Box<dyn Error>> {
     Ok(config.sort_order.clone())
 }
 
+/// Get auto_sync_enabled from config
+pub fn get_auto_sync_enabled() -> Result<bool, Box<dyn Error>> {
+    let config = Config::load()?;
+    Ok(config.auto_sync_enabled.clone())
+}
+
 /// Set sort order in config
 pub fn set_sort_order(sort_order: SortOrder) -> Result<(), Box<dyn Error>> {
     let mut config = Config::load()?;
@@ -291,3 +311,20 @@ pub fn set_sort_order(sort_order: SortOrder) -> Result<(), Box<dyn Error>> {
     println!("✅ Sort order updated to: {}", sort_order);
     Ok(())
 }
+
+/// Set git_remote path in config
+pub fn set_git_remote(path: String) -> Result<(), Box<dyn Error>> {
+    let mut config = Config::load()?;
+    config.set_git_remote(path.clone())?;
+    println!("Git remote path updated to: {}", path);
+    Ok(())
+}
+
+/// Set auto_sync in config
+pub fn set_auto_sync(enabled: bool) -> Result<(), Box<dyn Error>> {
+    let mut config = Config::load()?;
+    config.set_auto_sync(enabled.clone())?;
+    println!("Git auto sync updated to: {}", enabled);
+    Ok(())
+}
+

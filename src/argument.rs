@@ -48,3 +48,27 @@ pub fn finished_argument() -> ArgumentMeta {
         help: "change finish state, false: not finished, true: finished, e.g. -f true".to_string(),
     }
 }
+
+pub fn config_git_remote_argument() -> ArgumentMeta {
+    ArgumentMeta {
+        name: "git_remote_path".to_string(),
+        prefix: "r".to_string(),
+        help: "change git_remote_path, e.g. -r git@github-haw:torbenrathje/unsafeTodoData.git".to_string(),
+    }
+}
+
+pub fn config_auto_sync_argument() -> ArgumentMeta {
+    ArgumentMeta {
+        name: "auto_sync".to_string(),
+        prefix: "a".to_string(),
+        help: "change auto_sync state, true: auto sync enabled, false: auto_sync disabled, e.g. -a true".to_string(),
+    }
+}
+
+pub fn config_show_argument() -> ArgumentMeta {
+    ArgumentMeta {
+        name: "config_show".to_string(),
+        prefix: "s".to_string(),
+        help: "shows current configuration".to_string(),
+    }
+}

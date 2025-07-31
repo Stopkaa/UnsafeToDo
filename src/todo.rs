@@ -6,6 +6,7 @@ use std::io::{self, BufRead, BufReader, Write};
 use crate::priority::Priority;
 use crate::sync::GitRepo;
 use std::cmp::Ordering;
+use crate::config::TODO_FILE_NAME;
 use crate::sort_order::SortOrder;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -322,10 +323,14 @@ impl TodoList {
 
         let data_dir = config::get_data_dir()?;
         let repo = GitRepo::new(data_dir);
-
-        if let Err(e) = repo.sync_file("todos.json") { //TODO "todos.json" auch config
-            eprintln!("Git sync failed: {}", e);
+        
+        let auto_sync = config::get_auto_sync_enabled()?;
+        if  auto_sync {
+            if let Err(e) = repo.sync_file(TODO_FILE_NAME) {
+                eprintln!("Git sync failed: {}", e);
+            }
         }
+        
         
         Ok(())
     }
@@ -353,6 +358,10 @@ impl TodoList {
     /// Sort todos by the given sort order
     pub fn sort_by_order(&mut self, sort_order: &SortOrder) {
         self.todos.sort_by(|a, b| a.compare(b, sort_order));
+    }
+    
+    pub fn todos_as_vec(&self) -> Vec<Todo> {
+        self.todos.clone()
     }
 }
 

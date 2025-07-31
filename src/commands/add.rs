@@ -52,7 +52,7 @@ impl Command for AddCommand {
         let todo = builder.build()?; // ? gibt fehler direkt zurueck
         todo_list.add(todo);
         todo_list.save()?;
-
+        println!("Todo added!");
         Ok(())
     }
 
