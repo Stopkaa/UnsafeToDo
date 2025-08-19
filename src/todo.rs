@@ -1,12 +1,12 @@
+use crate::config;
+use crate::priority::Priority;
+use crate::sort_order::SortOrder;
+use crate::sync::GitRepo;
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
-use crate::config;
+use std::cmp::Ordering;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, Write};
-use crate::priority::Priority;
-use crate::sync::GitRepo;
-use std::cmp::Ordering;
-use crate::sort_order::SortOrder;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Todo {
@@ -18,7 +18,6 @@ pub struct Todo {
     created_at: DateTime<Utc>,
     due_date: Option<NaiveDate>,
 }
-
 
 impl Todo {
     pub fn new(title: String) -> Self {
@@ -39,7 +38,7 @@ impl Todo {
         todo.set_id(id);
         Ok(todo)
     }
-    
+
     pub fn save_to_file(&self) -> Result<(), Box<dyn std::error::Error>> {
         let as_json = serde_json::to_string(self)?;
         let path = config::get_data_path();
@@ -53,7 +52,6 @@ impl Todo {
 
         Ok(())
     }
-
 
     pub fn is_finished(&self) -> bool {
         self.finished
@@ -95,35 +93,35 @@ impl Todo {
     pub fn get_priority(&self) -> &Priority {
         &self.priority
     }
-    
+
     pub fn get_finished(&self) -> bool {
         self.finished
     }
 
-    pub fn set_id(&mut self, id: u32){
+    pub fn set_id(&mut self, id: u32) {
         self.id = id;
     }
-    
-    pub fn set_title(&mut self, title: String){
+
+    pub fn set_title(&mut self, title: String) {
         self.title = title;
     }
-    
-    pub fn set_description(&mut self, description: String){
+
+    pub fn set_description(&mut self, description: String) {
         self.description = Some(description);
     }
-    
-    pub fn set_priority(&mut self, priority: Priority){
+
+    pub fn set_priority(&mut self, priority: Priority) {
         self.priority = priority;
     }
-    
+
     pub fn set_due_date(&mut self, due_date: NaiveDate) {
         self.due_date = Some(due_date);
     }
-    
+
     pub fn set_finished(&mut self, finished: bool) {
         self.finished = finished;
     }
-    
+
     pub fn set_creation_date(&mut self, creation_date: DateTime<Utc>) {
         self.created_at = creation_date;
     }
@@ -131,13 +129,13 @@ impl Todo {
     /// Compare todos by the given sort order (supports chained criteria)
     pub fn compare(&self, other: &Todo, sort_order: &SortOrder) -> Ordering {
         let result = self.compare_single_criterion(other, sort_order);
-        
+
         if result == Ordering::Equal {
             if let Some(next_criterion) = sort_order.get_next() {
                 return self.compare(other, next_criterion);
             }
         }
-        
+
         result
     }
 
@@ -210,16 +208,12 @@ impl Todo {
     }
 }
 
-
-// --------- Builder ------------
-
 pub struct TodoBuilder {
     id: u32,
-    title: Option<String>,
+    title: String,
     description: Option<String>,
-    finished: bool,
-    priority: Priority,
-    created_at: DateTime<Utc>,
+    finished: Option<bool>,
+    priority: Option<Priority>,
     due_date: Option<NaiveDate>,
 }
 
@@ -227,11 +221,10 @@ impl TodoBuilder {
     pub fn new() -> Self {
         Self {
             id: 0,
-            title: None,
+            title: String::new(),
             description: None,
-            finished: false,
-            priority: Priority::Low,
-            created_at: Utc::now(),
+            finished: None,
+            priority: None,
             due_date: None,
         }
     }
@@ -242,47 +235,42 @@ impl TodoBuilder {
     }
 
     pub fn title(mut self, title: impl Into<String>) -> Self {
-        self.title = Some(title.into());
+        self.title = title.into();
         self
     }
 
-    pub fn description(mut self, description: impl Into<String>) -> Self {
-        self.description = Some(description.into());
+    pub fn description(mut self, description: impl Into<Option<String>>) -> Self {
+        self.description = description.into();
         self
     }
 
-    pub fn finished(mut self, finished: bool) -> Self {
-        self.finished = finished;
+    pub fn finished(mut self, finished: impl Into<Option<bool>>) -> Self {
+        self.finished = finished.into();
         self
     }
 
-    pub fn priority(mut self, priority: Priority) -> Self {
-        self.priority = priority;
+    pub fn priority(mut self, priority: impl Into<Option<Priority>>) -> Self {
+        self.priority = priority.into();
         self
     }
 
-    pub fn due_date(mut self, due_date: NaiveDate) -> Self {
-        self.due_date = Some(due_date);
+    pub fn due_date(mut self, due_date: impl Into<Option<NaiveDate>>) -> Self {
+        self.due_date = due_date.into();
         self
     }
 
     pub fn build(self) -> Result<Todo, String> {
-        if let Some(title) = self.title {
-            Ok(Todo {
-                id: self.id,
-                title,
-                description: self.description,
-                finished: self.finished,
-                priority: self.priority,
-                created_at: self.created_at,
-                due_date: self.due_date,
-            })
-        } else {
-            Err("Title is required".into())
-        }
+        Ok(Todo {
+            id: self.id,
+            title: self.title,
+            description: self.description,
+            finished: self.finished.unwrap_or_default(),
+            priority: self.priority.unwrap_or_default(),
+            created_at: Utc::now(),
+            due_date: self.due_date,
+        })
     }
 }
-//-------------------------
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TodoList {
@@ -319,14 +307,14 @@ impl TodoList {
         File::create(path)?;
         self.todos.iter().try_for_each(|todo| todo.save_to_file())?;
 
-
         let data_dir = config::get_data_dir()?;
         let repo = GitRepo::new(data_dir);
 
-        if let Err(e) = repo.sync_file("todos.json") { //TODO "todos.json" auch config
+        if let Err(e) = repo.sync_file("todos.json") {
+            //TODO "todos.json" auch config
             eprintln!("Git sync failed: {}", e);
         }
-        
+
         Ok(())
     }
 
@@ -345,7 +333,7 @@ impl TodoList {
     pub fn get_todo(&self, id: usize) -> Option<&Todo> {
         self.todos.get(id)
     }
-    
+
     pub fn get_todo_mut(&mut self, id: usize) -> Option<&mut Todo> {
         self.todos.get_mut(id)
     }
@@ -359,8 +347,6 @@ impl TodoList {
 pub fn todos_from_json_lines(lines: &[String]) -> Vec<Todo> {
     lines
         .iter()
-        .filter_map(|line| {
-            Todo::from_json_line(line, 0).ok()
-        })
+        .filter_map(|line| Todo::from_json_line(line, 0).ok())
         .collect()
 }

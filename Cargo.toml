@@ -12,3 +12,4 @@ dirs = "5.0"  # für plattformunabhängigen Pfad
 tabled = "0.19" #displaying todos
 terminal_size = "0.4.2" #adustable table
 git2 = "0.20.2"
+clap = { version = "4.5.42", features = ["derive", "color", "suggestions"] }

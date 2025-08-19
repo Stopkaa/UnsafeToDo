@@ -6,15 +6,22 @@ mod display;
 mod argument;
 mod sort_order;
 mod sync;
-
+mod cli;
 mod priority;
 //mod sync;
 mod config;
 use parser::parse_args;
 
 use crate::sync::GitRepo;
-
+use crate::cli::Cli;
+use clap::Parser;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let cli = Cli::parse();
+    if let Err(e) = cli.execute() {
+        eprintln!("Error: {}", e);
+        std::process::exit(1);
+    }
+    return Ok(());
     let args: Vec<String> = std::env::args().skip(1).collect();
 
     //config laden

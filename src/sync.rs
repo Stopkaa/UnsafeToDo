@@ -338,7 +338,7 @@ impl GitRepo {
             TodoBuilder::new()
                 .id(1)  // falls nötig, musst du id auch im Builder als Methode ergänzen
                 .title("Local Task 1")
-                .description("Lokale Aufgabe")
+                .description(Some("Lokale Aufgabe".to_string()))
                 .finished(false)
                 .priority(Priority::Medium)
                 .due_date(NaiveDate::from_ymd(2025, 7, 1))
@@ -361,7 +361,7 @@ impl GitRepo {
             TodoBuilder::new()
                 .id(2)
                 .title("Common Task")
-                .description("Remote Beschreibung")
+                .description(Some("Remote Beschreibung".to_string()))
                 .finished(false)
                 .priority(Priority::High)
                 .due_date(NaiveDate::from_ymd(2025, 7, 10))

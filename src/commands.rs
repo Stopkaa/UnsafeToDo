@@ -30,7 +30,7 @@ pub trait Command {
 
 pub(crate) fn all_commands() -> Vec<(&'static str, Box<dyn Command>)> {
     vec![
-        ("add", Box::new(AddCommand)),
+        //("add", Box::new(AddCommand)),
         ("show", Box::new(ShowCommand)),
         ("remove", Box::new(RemoveCommand)),
         ("complete", Box::new(CompleteCommand)),
