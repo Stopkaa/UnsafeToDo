@@ -1,8 +1,16 @@
-use std::str::FromStr;
+use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, 
+        Deserialize, 
+        Debug, 
+        Clone, 
+        PartialEq, 
+        ValueEnum, 
+        Default)]
 pub enum Priority {
+    #[default]
     Low,
     Medium,
     High,
@@ -20,7 +28,7 @@ impl Priority {
     pub fn priority_value(&self) -> u8 {
         match self {
             Priority::Low => 1,
-            Priority::Medium => 2, 
+            Priority::Medium => 2,
             Priority::High => 3,
         }
     }
