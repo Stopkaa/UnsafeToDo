@@ -1,34 +1,27 @@
+mod cli;
 mod commands;
-mod todo;
-mod todo_list;
-mod utils;
+mod config;
 mod display;
+mod priority;
 mod sort_order;
 mod sync;
-mod cli;
-mod priority;
-//mod sync;
-mod config;
+mod todo;
+mod todo_list;
 
-use crate::sync::GitRepo;
 use crate::cli::Cli;
+use crate::sync::GitRepo;
 use clap::Parser;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let conf = config::load_config()?;
+    let data_dir = config::get_data_dir()?;
+    let remote_url = conf.git_remote.as_deref();
+    let git_repo = GitRepo::new(data_dir);
+    git_repo.setup(remote_url)?;
     let cli = Cli::parse();
     if let Err(e) = cli.execute() {
         eprintln!("Error: {}", e);
         std::process::exit(1);
     }
-    return Ok(());
-
-    //config laden
-    let conf = config::load_config()?;
-    let data_dir = config::get_data_dir()?;
-    let remote_url = conf.git_remote.as_deref(); //wenns remote repo gibt und in config eingetragen
-
-    let git_repo = GitRepo::new(data_dir);
-    //git_repo.demo_merge()?;//TODO nur zum testen vom merge
-    git_repo.setup(remote_url)?;
     Ok(())
 }
