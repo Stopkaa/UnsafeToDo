@@ -1,17 +1,11 @@
 use crate::config;
 use crate::priority::Priority;
-use crate::sort_order::SortOrder;
-use crate::sync::GitRepo;
+use crate::sort_order::SortCriteria;
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
-use std::fs::File;
-use std::io::{self, BufRead, BufReader, Write};
-use crate::priority::Priority;
-use crate::sync::GitRepo;
-use std::cmp::Ordering;
-use crate::config::TODO_FILE_NAME;
-use crate::sort_order::SortOrder;
+use std::io::{self, Write};
+
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Todo {
@@ -132,42 +126,34 @@ impl Todo {
     }
 
     /// Compare todos by the given sort order (supports chained criteria)
-    pub fn compare(&self, other: &Todo, sort_order: &SortOrder) -> Ordering {
-        let result = self.compare_single_criterion(other, sort_order);
-
-        if result == Ordering::Equal {
-            if let Some(next_criterion) = sort_order.get_next() {
-                return self.compare(other, next_criterion);
-            }
-        }
-
-        result
+    pub fn compare(&self, other: &Todo, sort_order: &SortCriteria) -> Ordering {
+        self.compare_single_criterion(other, sort_order)
     }
 
     /// Compare todos by a single criterion
-    fn compare_single_criterion(&self, other: &Todo, sort_order: &SortOrder) -> Ordering {
+    fn compare_single_criterion(&self, other: &Todo, sort_order: &SortCriteria) -> Ordering {
         match sort_order {
-            SortOrder::Priority(_) => {
+            SortCriteria::Priority => {
                 // High > Medium > Low
                 let self_priority = self.priority.priority_value();
                 let other_priority = other.priority.priority_value();
                 other_priority.cmp(&self_priority) // Reverse for High->Low order
             }
-            SortOrder::PriorityReverse(_) => {
+            SortCriteria::PriorityReverse => {
                 // Low > Medium > High
                 let self_priority = self.priority.priority_value();
                 let other_priority = other.priority.priority_value();
                 self_priority.cmp(&other_priority)
             }
-            SortOrder::CreatedDesc(_) => {
+            SortCriteria::CreatedDesc => {
                 // Newest first
                 other.created_at.cmp(&self.created_at)
             }
-            SortOrder::CreatedAsc(_) => {
+            SortCriteria::CreatedAsc => {
                 // Oldest first
                 self.created_at.cmp(&other.created_at)
             }
-            SortOrder::DueDate(_) => {
+            SortCriteria::DueDate => {
                 // Earliest due date first, no due date last
                 match (&self.due_date, &other.due_date) {
                     (Some(self_due), Some(other_due)) => self_due.cmp(other_due),
@@ -176,7 +162,7 @@ impl Todo {
                     (None, None) => Ordering::Equal,
                 }
             }
-            SortOrder::DueDateReverse(_) => {
+            SortCriteria::DueDateReverse => {
                 // Latest due date first, no due date last
                 match (&self.due_date, &other.due_date) {
                     (Some(self_due), Some(other_due)) => other_due.cmp(self_due),
@@ -185,15 +171,15 @@ impl Todo {
                     (None, None) => Ordering::Equal,
                 }
             }
-            SortOrder::TitleAsc(_) => {
+            SortCriteria::TitleAsc => {
                 // A-Z
                 self.title.to_lowercase().cmp(&other.title.to_lowercase())
             }
-            SortOrder::TitleDesc(_) => {
+            SortCriteria::TitleDesc => {
                 // Z-A
                 other.title.to_lowercase().cmp(&self.title.to_lowercase())
             }
-            SortOrder::Status(_) => {
+            SortCriteria::Status => {
                 // Unfinished first
                 match (self.finished, other.finished) {
                     (false, true) => Ordering::Less,
@@ -201,7 +187,7 @@ impl Todo {
                     _ => Ordering::Equal,
                 }
             }
-            SortOrder::StatusReverse(_) => {
+            SortCriteria::StatusReverse => {
                 // Finished first
                 match (self.finished, other.finished) {
                     (true, false) => Ordering::Less,
@@ -275,89 +261,4 @@ impl TodoBuilder {
             due_date: self.due_date,
         })
     }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct TodoList {
-    pub todos: Vec<Todo>,
-}
-
-impl TodoList {
-    pub fn new() -> Self {
-        TodoList { todos: Vec::new() }
-    }
-
-    pub fn load() -> io::Result<Self> {
-        let path = config::get_data_path();
-        if !path.exists() {
-            return Ok(TodoList::new());
-        }
-        let file = File::open(path)?;
-        let reader = BufReader::new(file);
-        let mut list = Self::new();
-
-        for (i, line) in reader.lines().enumerate() {
-            let line = line?;
-            if !line.trim().is_empty() {
-                let todo = Todo::from_json_line(&line, i as u32)?;
-                list.add(todo);
-            }
-        }
-
-        Ok(list)
-    }
-
-    pub fn save(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let path = config::get_data_path();
-        File::create(path)?;
-        self.todos.iter().try_for_each(|todo| todo.save_to_file())?;
-
-        let data_dir = config::get_data_dir()?;
-        let repo = GitRepo::new(data_dir);
-        
-        let auto_sync = config::get_auto_sync_enabled()?;
-        if  auto_sync {
-            if let Err(e) = repo.sync_file(TODO_FILE_NAME) {
-                eprintln!("Git sync failed: {}", e);
-            }
-        }
-
-        Ok(())
-    }
-
-    pub fn add(&mut self, task: Todo) {
-        self.todos.push(task);
-    }
-
-    pub fn remove(&mut self, index: usize) -> Option<Todo> {
-        if index < self.todos.len() {
-            Some(self.todos.remove(index))
-        } else {
-            None
-        }
-    }
-
-    pub fn get_todo(&self, id: usize) -> Option<&Todo> {
-        self.todos.get(id)
-    }
-
-    pub fn get_todo_mut(&mut self, id: usize) -> Option<&mut Todo> {
-        self.todos.get_mut(id)
-    }
-
-    /// Sort todos by the given sort order
-    pub fn sort_by_order(&mut self, sort_order: &SortOrder) {
-        self.todos.sort_by(|a, b| a.compare(b, sort_order));
-    }
-    
-    pub fn todos_as_vec(&self) -> Vec<Todo> {
-        self.todos.clone()
-    }
-}
-
-pub fn todos_from_json_lines(lines: &[String]) -> Vec<Todo> {
-    lines
-        .iter()
-        .filter_map(|line| Todo::from_json_line(line, 0).ok())
-        .collect()
 }

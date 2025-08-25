@@ -1,6 +1,13 @@
 use clap::{Parser, Subcommand};
 
-use crate::commands::add::{AddCommand, AddArgs};
+use crate::commands::{
+    add::{AddArgs, AddCommand},
+    complete::{CompleteArgs, CompleteCommand},
+    remove::{RemoveArgs, RemoveCommand},
+    show::{ShowArgs, ShowCommand},
+    sort::{SortArgs, SortCommand},
+    update::{UpdateArgs, UpdateCommand},
+};
 
 #[derive(Parser)]
 #[command(name = "utodo")]
@@ -14,14 +21,22 @@ pub struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     Add(AddArgs),
+    Remove(RemoveArgs),
+    Complete(CompleteArgs),
+    Show(ShowArgs),
+    Sort(SortArgs),
+    Update(UpdateArgs),
 }
 
 impl Cli {
     pub fn execute(self) -> Result<(), Box<dyn std::error::Error>> {
         match self.command {
-            Commands::Add(args) => AddCommand::execute(args)
+            Commands::Add(args) => AddCommand::execute(args),
+            Commands::Remove(args) => RemoveCommand::execute(args),
+            Commands::Complete(args) => CompleteCommand::execute(args),
+            Commands::Show(args) => ShowCommand::execute(args),
+            Commands::Sort(args) => SortCommand::execute(args),
+            Commands::Update(args) => UpdateCommand::execute(args),
         }
     }
 }
-
-

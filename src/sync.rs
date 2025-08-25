@@ -2,9 +2,10 @@ use std::fs;
 use std::io::{self};
 use std::path::PathBuf;
 use std::process::{Command, Output};
-use crate::display::{display_todo_vector};
-use crate::{config, todo};
+use crate::display::display_todo_vector;
+use crate::config;
 
+use crate::todo_list;
 pub struct GitRepo {
     path: PathBuf,
 }
@@ -84,8 +85,8 @@ impl GitRepo {
                 //    println!("    {}", l);
                 //}
 
-                let local_todos = todo::todos_from_json_lines(&head_block);
-                let incoming_todos = todo::todos_from_json_lines(&incoming_block);
+                let local_todos = todo_list::todos_from_json_lines(&head_block);
+                let incoming_todos = todo_list::todos_from_json_lines(&incoming_block);
 
                 println!("Local version:");
                 display_todo_vector(&local_todos);

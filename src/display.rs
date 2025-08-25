@@ -1,5 +1,4 @@
 use crate::todo::Todo;
-use crate::todo::TodoList;
 use tabled::Table;
 use tabled::Tabled;
 use tabled::settings::Alignment;
