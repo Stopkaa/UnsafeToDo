@@ -1,78 +1,63 @@
-use crate::{commands::Command, todo::TodoList};
-use std::str::FromStr;
-use chrono::NaiveDate;
-use crate::argument::{finished_argument, title_argument, ArgumentMeta};
-use crate::commands::add::{description_argument, due_date_argument, priority_argument};
-use crate::parser::ParsedCommand;
 use crate::priority::Priority;
+use crate::todo_list::TodoList;
+use chrono::NaiveDate;
+use clap::Args;
 
 #[derive(Debug)]
 pub struct UpdateCommand;
 
-impl Command for UpdateCommand {
-    fn execute(&self, parsed: &ParsedCommand) -> Result<(), Box<dyn std::error::Error>> {
-        let id_str = parsed.positional
-            .as_ref()
-            .ok_or_else(|| "No Index proposed")?;
+#[derive(Args)]
+pub struct UpdateArgs {
+    #[arg(long)]
+    id: usize,
 
-        let id = id_str.parse::<i32>()?;
+    #[arg(short, long)]
+    title: Option<String>,
+
+    #[arg(long)]
+    description: Option<String>,
+
+    #[arg(long, short, value_enum)]
+    priority: Option<Priority>,
+
+    #[arg(long, value_parser = parse_date_string,
+        help = "Date in format dd.mm.YYYY or d.m.YYYY"
+    )]
+    due_date: Option<NaiveDate>,
+
+    #[arg(short, long)]
+    finished: Option<bool>,
+}
+
+fn parse_date_string(date_as_str: &str) -> Result<NaiveDate, String> {
+    NaiveDate::parse_from_str(date_as_str, "%d.%m.%Y")
+        .map_err(|_| "Invalid date format. See help for further information".to_string())
+}
+
+impl UpdateCommand {
+    pub fn execute(args: UpdateArgs) -> Result<(), Box<dyn std::error::Error>> {
         let mut todo_list = TodoList::load().unwrap();
-        if let Some(todo ) = todo_list.get_todo_mut(id as usize) {
-            for arg_meta in self.arguments() {
-                if let Some(value) = parsed.options.get(&arg_meta.prefix) {
-                    match arg_meta.name.as_str() {
-                        "priority" => {
-                            let priority = Priority::from_str(value).unwrap_or_else(|_| {
-                                println!("Warning: Invalid priority '{}', defaulting to 'Low'", value);
-                                Priority::Low
-                            });
-                            todo.set_priority(priority);
-                        }
-                        "due_date" => {
-                            match NaiveDate::parse_from_str(value, "%d.%m.%Y") {
-                                Ok(date) => {
-                                    todo.set_due_date(date);
-                                }
-                                Err(err) => {
-                                    println!("Warning: Invalid due date '{}': {}", value, err);
-                                }
-                            }
-                        }
-                        "title" => {
-                            todo.set_title(value.clone());
-                        }
-                        "description" => {
-                            todo.set_description(value.clone());
-                        }
-                        "finished" => {
-                            let finished = value.parse::<bool>().unwrap_or_else( |_| {
-                                println!("Warning: Invalid finished value '{}', defaulting to 'false'", value);
-                                false
-                            });
-                            todo.set_finished(finished);
-                        }
-                        _ => {
-                            println!("Unknown argument: {} = {}", arg_meta.name, value);
-                        }
-                    }
-                }
+        if let Some(todo) = todo_list.get_todo_mut(args.id) {
+            if let Some(title) = args.title {
+                todo.set_title(title.clone());
+            }
+            if let Some(priority) = args.priority {
+                todo.set_priority(priority);
+            }
+            if let Some(due_date) = args.due_date {
+                todo.set_due_date(due_date);
+            }
+            if let Some(description) = args.description {
+                todo.set_description(description);
+            }
+            if let Some(finished) = args.finished {
+                todo.set_finished(finished);
             }
             todo_list.save()?;
-            println!("Todo with ID: {} updated", id);
-        }
-        else {
-            return Err(format!("Todo with ID: {} not found", id).into());
+            println!("Todo with ID: {} updated", args.id);
+        } else {
+            return Err(format!("Todo with ID: {} not found", args.id).into());
         }
         Ok(())
     }
-
-    fn arguments(&self) -> Vec<ArgumentMeta> {
-        vec![priority_argument(), due_date_argument(), description_argument(), finished_argument(), title_argument()]
-    }
-
-
-    fn description(&self) -> &'static str {
-        "Updates one todo with given index"
-    }
 }
-
