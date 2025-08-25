@@ -1,23 +1,17 @@
-use crate::commands::Command;
 use crate::display::{display_todo_vector};
-use crate::todo::TodoList;
-use crate::parser::ParsedCommand;
+use crate::todo_list::TodoList;
+use clap::Args;
 
 #[derive(Debug)]
 pub struct ShowCommand;
 
-impl Command for ShowCommand {
-    fn execute(&self, _: &ParsedCommand) -> Result<(), Box<dyn std::error::Error>> {
-        show_todo_pretty()
-    }
+#[derive(Args)]
+pub struct ShowArgs {}
 
-    fn description(&self) -> &'static str {
-        "Shows all todos in the list"
+impl ShowCommand {
+    pub fn execute(_: ShowArgs) -> Result<(), Box<dyn std::error::Error>> {
+        let todos = TodoList::load()?;
+        display_todo_vector(&todos.todos_as_vec());
+        Ok(())
     }
-}
-
-pub fn show_todo_pretty() -> Result<(), Box<dyn std::error::Error>> {
-    let todos = TodoList::load()?;
-    display_todo_vector(&todos.todos_as_vec());
-    Ok(())
 }

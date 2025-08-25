@@ -1,33 +1,29 @@
-use crate::parser::ParsedCommand;
-use crate::{commands::Command, todo::TodoList};
+use crate::todo_list::TodoList;
+use clap::Args;
 
 #[derive(Debug)]
 pub struct CompleteCommand;
 
-impl Command for CompleteCommand {
-    fn execute(&self, parsed: &ParsedCommand) -> Result<(), Box<dyn std::error::Error>> {
-        let id = parsed.positional
-            .as_deref()
-            .ok_or("No ID provided")?;
-        
-        let id: usize = id.parse()
-            .map_err(|_| format!("Invalid ID format: '{}'", id))?;
-        
-        let mut todo_list = TodoList::load()
-            .map_err(|e| format!("Failed to load todo list: {}", e))?;
-        
-        let todo = todo_list.get_todo_mut(id)
-            .ok_or_else(|| format!("Todo with ID {} not found", id))?;
-        
+#[derive(Args)]
+pub struct CompleteArgs {
+    id: usize,
+}
+
+impl CompleteCommand {
+    pub fn execute(args: CompleteArgs) -> Result<(), Box<dyn std::error::Error>> {
+        let mut todo_list =
+            TodoList::load().map_err(|e| format!("Failed to load todo list: {}", e))?;
+
+        let todo = todo_list
+            .get_todo_mut(args.id)
+            .ok_or_else(|| format!("Todo with ID {} not found", args.id))?;
+
         todo.complete(true);
-        todo_list.save()
+        todo_list
+            .save()
             .map_err(|e| format!("Failed to save todo list: {}", e))?;
-        
-        println!("Todo with ID {} completed", id);
+
+        println!("Todo with ID {} completed", args.id);
         Ok(())
-    }
-    
-    fn description(&self) -> &'static str {
-        "Marks a todo as completed"
     }
 }

@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::fs;
-use crate::sort_order::SortOrder;
+use crate::sort_order::SortCriteria;
 
 pub const TODO_FILE_NAME: &str = "todos.json";
 pub const CONFIG_FILE_NAME: &str = "config.json";
@@ -16,7 +16,7 @@ pub struct Config {
     /// Optional git remote to sync with
     pub git_remote: Option<String>,
     // Sort order
-    sort_order: SortOrder,
+    sort_order: Vec<SortCriteria>,
 }
 
 impl Config {
@@ -50,7 +50,7 @@ impl Config {
         Ok(Config {
             data_path: Self::default_data_path()?,
             auto_sync_enabled: false,
-            sort_order: SortOrder::default(),
+            sort_order: vec![SortCriteria::default()],
             git_remote: None,
         })
     }
@@ -134,71 +134,23 @@ impl Config {
             fs::copy(&old_todos_file, &new_todos_file)?;
             println!("📋 Migrated todos from {} to {}", 
                 old_todos_file.display(), new_todos_file.display());
-            
-            // Optional: remove old file
-            // fs::remove_file(&old_todos_file)?;
         }
         
         Ok(())
     }
 
     /// Get current sort order
-    pub fn get_sort_order(&self) -> &SortOrder {
+    pub fn get_sort_order(&self) -> &Vec<SortCriteria> {
         &self.sort_order
     }
 
     /// Set sort order and save config
-    pub fn set_sort_order(&mut self, sort_order: SortOrder) -> Result<(), Box<dyn Error>> {
+    pub fn set_sort_order(&mut self, sort_order: Vec<SortCriteria>) -> Result<(), Box<dyn Error>> {
         self.sort_order = sort_order;
         self.save()?;
         Ok(())
     }
     
-    /// Show current configuration
-    pub fn show(&self) -> Result<(), Box<dyn Error>> {
-        println!("📊 Configuration:");
-        println!("   Config file: {}", Self::config_file_path()?.display());
-        println!("   Data path: {}", self.data_path.display());
-        println!("   Todos file: {}", self.get_todos_file_path().display());
-        println!("   Auto-sync: {}", if self.auto_sync_enabled { "✅ Enabled" } else { "❌ Disabled" });
-        println!(
-            "   Git remote path: {}",
-            self.git_remote.as_deref().unwrap_or("No Path")
-        );
-        
-                // Show if todos file exists
-        let todos_file = self.get_todos_file_path();
-        if todos_file.exists() {
-            println!("   Todos file: ✅ Exists");
-        } else {
-            println!("   Todos file: ❌ Not found (will be created)");
-        }
-        
-        Ok(())
-    }
-    
-    /// Validate configuration (basic checks only)
-    pub fn validate(&self) -> Result<(), Box<dyn Error>> {
-        // Check if data path exists
-        if !self.data_path.exists() {
-            return Err(format!("Data path does not exist: {}", self.data_path.display()).into());
-        }
-        
-        // Check if data path is writable
-        let test_file = self.data_path.join(".write_test");
-        match fs::write(&test_file, "test") {
-            Ok(_) => {
-                fs::remove_file(&test_file).ok(); // Clean up
-            }
-            Err(_) => {
-                return Err(format!("Data path is not writable: {}", self.data_path.display()).into());
-            }
-        }
-        
-        Ok(())
-    }
-    
-    /// Get config file location for display purposes
     pub fn get_config_file_path() -> Result<PathBuf, Box<dyn Error>> {
         Self::config_file_path()
     }
@@ -232,12 +184,6 @@ pub fn get_data_dir() -> Result<PathBuf, Box<dyn Error>> {
     Ok(config.data_path)
 }
 
-/// Show current configuration
-pub fn show_config() -> Result<(), Box<dyn Error>> {
-    let config = Config::load()?;
-    config.show()
-}
-
 /// Set data path where todos are stored
 pub fn set_data_path(new_path: PathBuf) -> Result<(), Box<dyn Error>> {
     let mut config = Config::load()?;
@@ -257,7 +203,6 @@ pub fn set_data_path(new_path: PathBuf) -> Result<(), Box<dyn Error>> {
 /// Validate current configuration
 pub fn validate_config() -> Result<(), Box<dyn Error>> {
     let config = Config::load()?;
-    config.validate()?;
     println!("✅ Configuration is valid");
     Ok(())
 }
@@ -265,7 +210,6 @@ pub fn validate_config() -> Result<(), Box<dyn Error>> {
 /// Initialize data directory and config
 pub fn init_config() -> Result<(), Box<dyn Error>> {
     let config = Config::load()?; // This creates default if needed
-    config.validate()?;
     
     // Create TODO_FILE_NAME if it doesn't exist
     let todos_file = config.get_todos_file_path();
@@ -278,22 +222,8 @@ pub fn init_config() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-/// Reset configuration to defaults
-pub fn reset_config() -> Result<(), Box<dyn Error>> {
-    let config_path = Config::get_config_file_path()?;
-    
-    if config_path.exists() {
-        fs::remove_file(&config_path)?;
-        println!("🗑️  Removed existing config file");
-    }
-    
-    let new_config = Config::load()?; // Creates new default config
-    println!("✅ Configuration reset to defaults");
-    new_config.show()
-}
-
 /// Get current sort order from config
-pub fn get_sort_order() -> Result<SortOrder, Box<dyn Error>> {
+pub fn get_sort_order() -> Result<Vec<SortCriteria>, Box<dyn Error>> {
     let config = Config::load()?;
     Ok(config.sort_order.clone())
 }
@@ -305,12 +235,13 @@ pub fn get_auto_sync_enabled() -> Result<bool, Box<dyn Error>> {
 }
 
 /// Set sort order in config
-pub fn set_sort_order(sort_order: SortOrder) -> Result<(), Box<dyn Error>> {
+pub fn set_sort_order(sort_order: Vec<SortCriteria>) -> Result<(), Box<dyn Error>> {
     let mut config = Config::load()?;
     config.set_sort_order(sort_order.clone())?;
-    println!("✅ Sort order updated to: {}", sort_order);
+    println!("✅ Sort order updated");
     Ok(())
 }
+
 
 /// Set git_remote path in config
 pub fn set_git_remote(path: String) -> Result<(), Box<dyn Error>> {
@@ -327,4 +258,3 @@ pub fn set_auto_sync(enabled: bool) -> Result<(), Box<dyn Error>> {
     println!("Git auto sync updated to: {}", enabled);
     Ok(())
 }
-
