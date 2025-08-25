@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::io::{self, Write};
 
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Todo {
     id: u32,
