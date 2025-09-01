@@ -1,10 +1,9 @@
-use crate::config;
 use crate::priority::Priority;
 use crate::sort_order::SortCriteria;
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
-use std::io::{self, Write};
+use std::io;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Todo {
@@ -18,37 +17,11 @@ pub struct Todo {
 }
 
 impl Todo {
-    pub fn new(title: String) -> Self {
-        Self {
-            id: 0,
-            title,
-            description: None,
-            finished: false,
-            priority: Priority::Low,
-            created_at: Utc::now(),
-            due_date: None,
-        }
-    }
-
     pub fn from_json_line(line: &str, id: u32) -> io::Result<Todo> {
         let mut todo: Todo = serde_json::from_str(line)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
         todo.set_id(id);
         Ok(todo)
-    }
-
-    pub fn save_to_file(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let as_json = serde_json::to_string(self)?;
-        let path = config::get_data_path();
-
-        let mut file = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&path)?;
-
-        writeln!(file, "{}", as_json)?;
-
-        Ok(())
     }
 
     pub fn is_finished(&self) -> bool {
@@ -64,20 +37,20 @@ impl Todo {
         }
     }
 
-    pub fn complete(&mut self, complete: bool) {
-        self.finished = complete;
+    pub fn finish(&mut self, finished: bool) {
+        self.finished = finished;
     }
 
-    pub fn get_title(&self) -> String {
-        self.title.clone()
+    pub fn get_title(&self) -> &String {
+        &self.title
     }
 
     pub fn get_id(&self) -> u32 {
         self.id
     }
 
-    pub fn get_description(&self) -> String {
-        self.description.clone().unwrap_or_default()
+    pub fn get_description(&self) -> Option<&str> {
+        self.description.as_deref()
     }
 
     pub fn get_creation_date(&self) -> DateTime<Utc> {
@@ -90,10 +63,6 @@ impl Todo {
 
     pub fn get_priority(&self) -> &Priority {
         &self.priority
-    }
-
-    pub fn get_finished(&self) -> bool {
-        self.finished
     }
 
     pub fn set_id(&mut self, id: u32) {
@@ -116,21 +85,8 @@ impl Todo {
         self.due_date = Some(due_date);
     }
 
-    pub fn set_finished(&mut self, finished: bool) {
-        self.finished = finished;
-    }
-
-    pub fn set_creation_date(&mut self, creation_date: DateTime<Utc>) {
-        self.created_at = creation_date;
-    }
-
     /// Compare todos by the given sort order (supports chained criteria)
     pub fn compare(&self, other: &Todo, sort_order: &SortCriteria) -> Ordering {
-        self.compare_single_criterion(other, sort_order)
-    }
-
-    /// Compare todos by a single criterion
-    fn compare_single_criterion(&self, other: &Todo, sort_order: &SortCriteria) -> Ordering {
         match sort_order {
             SortCriteria::Priority => {
                 // High > Medium > Low

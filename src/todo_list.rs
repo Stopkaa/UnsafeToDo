@@ -1,10 +1,12 @@
 use crate::sort_order::SortCriteria;
+use crate::storage;
 use crate::sync::GitRepo;
 use crate::{config, todo::Todo};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader};
+use crate::storage::{TodoStorage, file_storage::TodoFileStorage};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TodoList {
@@ -38,8 +40,9 @@ impl TodoList {
 
     pub fn save(&self) -> Result<(), Box<dyn std::error::Error>> {
         let path = config::get_data_path();
-        File::create(path)?;
-        self.todos.iter().try_for_each(|todo| todo.save_to_file())?;
+        File::create(path.clone())?;
+        let storage = TodoFileStorage::new(path);
+        storage.save_todos(&self.todos)?;
 
         let data_dir = config::get_data_dir()?;
         let repo = GitRepo::new(data_dir);
@@ -50,7 +53,6 @@ impl TodoList {
                 eprintln!("Git sync failed: {}", e);
             }
         }
-
         Ok(())
     }
 

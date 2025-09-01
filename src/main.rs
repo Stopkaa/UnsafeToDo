@@ -7,6 +7,8 @@ mod sort_order;
 mod sync;
 mod todo;
 mod todo_list;
+mod storage;
+mod comparator;
 
 use crate::cli::Cli;
 use crate::sync::GitRepo;
