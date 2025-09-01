@@ -12,6 +12,11 @@ use tabled::settings::style::LineText;
 use tabled::settings::{Height, Width};
 use terminal_size::{Height as TerminalHeight, Width as TerminalWidth, terminal_size};
 
+const TITLE_OFFSET: usize = 2;
+const STATUS_COLUMN: usize = 3;
+const DEFAULT_TERMINAL_WIDTH: usize = 80;
+const DEFAULT_TERMINAL_HEIGHT: usize = 24;
+
 #[derive(Tabled)]
 struct TodoDisplay {
     id: String,
@@ -23,53 +28,46 @@ struct TodoDisplay {
     due_date: String,
 }
 
-impl TodoDisplay {
-    pub fn from(todo: &Todo) -> Self {
-        let id = todo.get_id().to_string();
-        let title = todo.get_title();
-        let description = todo.get_description();
-        let finished = (if todo.is_finished() { 
-            "✅" 
-        }
-        else if todo.is_overdue() {
-            "❌"
-        }
-        else { 
-            "⏳" 
-        }).to_string();
-        let priority = todo.get_priority().to_string();
-        let created_at = todo
-            .get_creation_date()
-            .format("%H:%M %d.%m.%Y")
-            .to_string();
-        let due_date = todo
-            .get_due_date()
-            .map(|date| date.format("%d.%m.%Y").to_string())
-            .unwrap_or_default();
-
+impl From<&Todo> for TodoDisplay {
+    fn from(todo: &Todo) -> Self {
         Self {
-            id,
-            title,
-            description,
-            finished,
-            priority,
-            created_at,
-            due_date,
+            id: todo.get_id().to_string(),
+            title: todo.get_title(),
+            description: todo.get_description(),
+            finished: status_emoji(todo),
+            priority: todo.get_priority().to_string(),
+            created_at: todo
+                .get_creation_date()
+                .format("%H:%M %d.%m.%Y")
+                .to_string(),
+            due_date: todo
+                .get_due_date()
+                .map(|d| d.format("%d.%m.%Y").to_string())
+                .unwrap_or_default(),
         }
     }
 }
 
-
-pub fn display_todo_vector(todo_vec: &Vec<Todo>) {
-    let mut todos = vec![];
-    for todo in todo_vec.iter() {
-        todos.push(TodoDisplay::from(todo));
+fn status_emoji(todo: &Todo) -> String {
+    match (todo.is_finished(), todo.is_overdue()) {
+        (true, _) => "✅",
+        (false, true) => "❌",
+        (false, false) => "⏳",
     }
+    .to_string()
+}
+
+pub fn display_todo_vector(todos: &[Todo]) {
+    // Create display data
+    let display_data: Vec<TodoDisplay> = todos.iter().map(TodoDisplay::from).collect();
+
     let (width, height) = get_terminal_size();
-    let mut table = Table::new(todos);
+    let mut table = Table::new(display_data);
+
+    // Apply base styling
     table
         .with(Style::rounded())
-        .with(LineText::new("Todos", Rows::first()).offset(2))
+        .with(LineText::new("Todos", Rows::first()).offset(TITLE_OFFSET))
         .with(Width::wrap(width).priority(Priority::max(true)))
         .with(Width::increase(width))
         .with(Height::limit(height))
@@ -77,22 +75,20 @@ pub fn display_todo_vector(todo_vec: &Vec<Todo>) {
         .modify(Locator::content("Low"), Color::FG_GREEN)
         .modify(Locator::content("Medium"), Color::FG_YELLOW)
         .modify(Locator::content("High"), Color::FG_RED)
-        .modify(Columns::single(3), Alignment::center());
+        .modify(Columns::single(STATUS_COLUMN), Alignment::center());
 
-    for (i, todo) in todo_vec.iter().enumerate() {
-        let is_overdue = todo.is_overdue();
-        let finished = todo.is_finished();
-        if is_overdue && !finished {
+    // Apply row-specific styling for overdue todos
+    for (i, todo) in todos.iter().enumerate() {
+        if todo.is_overdue() && !todo.is_finished() {
             table.modify(Rows::single(i + 1), Color::FG_RED);
         }
     }
+
     println!("{table}");
 }
 
-
 fn get_terminal_size() -> (usize, usize) {
-    let (TerminalWidth(width), TerminalHeight(height)) =
-        terminal_size().expect("failed to obtain a terminal size");
-
-    (width as usize, height as usize)
+    terminal_size()
+        .map(|(TerminalWidth(w), TerminalHeight(h))| (w as usize, h as usize))
+        .unwrap_or((DEFAULT_TERMINAL_WIDTH, DEFAULT_TERMINAL_HEIGHT))
 }
